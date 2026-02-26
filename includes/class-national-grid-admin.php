@@ -130,6 +130,7 @@ class National_Grid_Admin {
         try {
             $new_generation = Generation::update();
             $rows_written = self::write_generation_to_past_five_minutes( $new_generation );
+            $deleted_rows = self::delete_old_generation_data();
 
             if ( false === $rows_written ) {
                 return array(
@@ -139,14 +140,21 @@ class National_Grid_Admin {
                 );
             }
 
+            if ( false === $deleted_rows ) {
+                return array(
+                    'success' => false,
+                    'rows' => 0,
+                    'message' => __( 'Failed to delete old data from database.', 'national-grid' ),
+                );
+            }
+
             return array(
                 'success' => true,
                 'rows' => $rows_written,
                 'message' => sprintf(
                     /* translators: %d: number of saved rows */
-                    __( 'Data updated successfully. Saved rows: %d.<br><pre>%s</pre>', 'national-grid' ),
+                    __( 'Data updated successfully. Saved rows: %d.', 'national-grid' ),
                     $rows_written,
-                    print_r( $new_generation, true )
                 ),
             );
         } catch ( Throwable $e ) {
@@ -226,6 +234,25 @@ class National_Grid_Admin {
         }
 
         return $valid_rows_count;
+    }
+
+    /**
+     * Deletes generation rows older than 24 hours.
+     *
+     * @return int|false Number of deleted rows or false on database error.
+     */
+    private static function delete_old_generation_data() {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'national_grid_past_five_minutes';
+        $cutoff_time = gmdate( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS );
+
+        $sql = $wpdb->prepare(
+            'DELETE FROM `' . esc_sql( $table_name ) . '` WHERE `time` < %s',
+            $cutoff_time
+        );
+
+        return $wpdb->query( $sql );
     }
 
     public static function handle_update_data() {
