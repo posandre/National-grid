@@ -1,0 +1,29 @@
+.national-grid-admin-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+}
+
+.national-grid-admin-divider {
+    width: 100%;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid #dcdcde;
+}
+
+.national-grid-admin-update-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.national-grid-admin-loader {
+    float: none;
+    margin: 0;
+}
+
+.national-grid-admin-message {
+    margin-top: 10px;
+}
