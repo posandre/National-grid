@@ -44,7 +44,7 @@ class Time {
       );
     }
 
-    return '"' . str_replace(['T', 'Z'], [' ', ''], $time) . '"';
+    return str_replace(['T', 'Z'], [' ', ''], $time);
   }
 
   /**

@@ -127,11 +127,105 @@ class National_Grid_Admin {
     }
 
     public static function update_data() {
-//        update_option( 'national_grid_last_data_update', current_time( 'mysql' ) );
+        try {
+            $new_generation = Generation::update();
+            $rows_written = self::write_generation_to_past_five_minutes( $new_generation );
 
-//        return true;
+            if ( false === $rows_written ) {
+                return array(
+                    'success' => false,
+                    'rows' => 0,
+                    'message' => __( 'Failed to write data to database.', 'national-grid' ),
+                );
+            }
 
-        return Generation::update();
+            return array(
+                'success' => true,
+                'rows' => $rows_written,
+                'message' => sprintf(
+                    /* translators: %d: number of saved rows */
+                    __( 'Data updated successfully. Saved rows: %d.<br><pre>%s</pre>', 'national-grid' ),
+                    $rows_written,
+                    print_r( $new_generation, true )
+                ),
+            );
+        } catch ( Throwable $e ) {
+            return array(
+                'success' => false,
+                'rows' => 0,
+                'message' => $e->getMessage(),
+            );
+        }
+    }
+
+    /**
+     * Writes generation rows into the past_five_minutes table.
+     *
+     * Maps Generation::COLUMNS (source indexes) to Generation::KEYS (table columns).
+     *
+     * @param array $new_generation Generation rows indexed by time.
+     *
+     * @return int|false Number of written rows or false on database error.
+     */
+    private static function write_generation_to_past_five_minutes( array $new_generation ) {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'national_grid_past_five_minutes';
+        $column_to_key_map = array();
+
+        foreach ( Generation::COLUMNS as $column_index ) {
+            if ( isset( Generation::KEYS[ $column_index - 1 ] ) ) {
+                $column_to_key_map[ $column_index ] = Generation::KEYS[ $column_index - 1 ];
+            }
+        }
+
+        if ( empty( $column_to_key_map ) ) {
+            return 0;
+        }
+
+        $columns = array_merge( array( 'time' ), array_values( $column_to_key_map ) );
+        $column_sql = '`' . implode( '`, `', array_map( 'esc_sql', $columns ) ) . '`';
+        $table_sql = '`' . esc_sql( $table_name ) . '`';
+
+        $single_row_placeholders = '(' . implode( ', ', array_merge( array( '%s' ), array_fill( 0, count( $columns ) - 1, '%f' ) ) ) . ')';
+        $rows_placeholders = array();
+        $query_values = array();
+        $valid_rows_count = 0;
+
+        foreach ( $new_generation as $row ) {
+            if ( ! is_array( $row ) || ! isset( $row[0] ) || ! is_string( $row[0] ) ) {
+                continue;
+            }
+
+            $rows_placeholders[] = $single_row_placeholders;
+            $query_values[] = $row[0];
+
+            foreach ( $column_to_key_map as $column_index => $key ) {
+                $query_values[] = isset( $row[ $column_index ] ) ? (float) $row[ $column_index ] : 0.0;
+            }
+
+            $valid_rows_count++;
+        }
+
+        if ( 0 === $valid_rows_count ) {
+            return 0;
+        }
+
+        $update_parts = array();
+        foreach ( array_slice( $columns, 1 ) as $column_name ) {
+            $escaped_column = '`' . esc_sql( $column_name ) . '`';
+            $update_parts[] = $escaped_column . ' = VALUES(' . $escaped_column . ')';
+        }
+
+        $sql = "INSERT INTO {$table_sql} ({$column_sql}) VALUES " . implode( ', ', $rows_placeholders ) . ' ON DUPLICATE KEY UPDATE ' . implode( ', ', $update_parts );
+        $prepared_sql = $wpdb->prepare( $sql, $query_values );
+        $result = $wpdb->query( $prepared_sql );
+
+        if ( false === $result ) {
+            return false;
+        }
+
+        return $valid_rows_count;
     }
 
     public static function handle_update_data() {
@@ -144,7 +238,7 @@ class National_Grid_Admin {
         $updated = self::update_data();
         $redirect_url = add_query_arg(
             'national_grid_update',
-            $updated ? 'success' : 'error',
+            ( ! empty( $updated['success'] ) ) ? 'success' : 'error',
             admin_url( 'options-general.php?page=' . self::PAGE_SLUG )
         );
 
@@ -166,18 +260,17 @@ class National_Grid_Admin {
 
         $updated = self::update_data();
 
-        if ( $updated ) {
+        if ( ! empty( $updated['success'] ) ) {
             wp_send_json_success(
                 array(
-//                    'message' => __( 'Data updated successfully.', 'national-grid' ),
-                    'message' => '<pre>' . print_r( $updated, true ) . '</pre>',
+                    'message' => $updated['message'],
                 )
             );
         }
 
         wp_send_json_error(
             array(
-                'message' => __( 'Data update failed.', 'national-grid' ),
+                'message' => ! empty( $updated['message'] ) ? $updated['message'] : __( 'Data update failed.', 'national-grid' ),
             ),
             500
         );

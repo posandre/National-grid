@@ -25,7 +25,7 @@ class Generation {
     'greenlink'
   ];
 
-  private const COLUMNS = [
+  public const COLUMNS = [
     'COAL'    => 1,
     'CCGT'    => 2,
     'OCGT'    => 3,
