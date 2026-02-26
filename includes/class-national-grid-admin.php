@@ -152,9 +152,10 @@ class National_Grid_Admin {
                 'success' => true,
                 'rows' => $rows_written,
                 'message' => sprintf(
-                    /* translators: %d: number of saved rows */
-                    __( 'Data updated successfully. Saved rows: %d.', 'national-grid' ),
+                    /* translators: 1: number of saved rows, 2: number of deleted rows */
+                    __( 'Data updated successfully.<br> <strong>Saved rows</strong>: %1$d. <br><strong>Deleted old rows</strong>: %2$d.', 'national-grid' ),
                     $rows_written,
+                    $deleted_rows
                 ),
             );
         } catch ( Throwable $e ) {
