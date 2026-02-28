@@ -64,7 +64,6 @@ class Demand {
     }
 
     $written = DatabaseStorage::updateDemand(self::KEYS, $validData);
-    DatabaseStorage::deleteOldHalfHours();
 
     return [
       'read' => count($rows),

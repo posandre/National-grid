@@ -116,13 +116,6 @@ class DatabaseStorage {
             )
         );
 
-//        error_log(
-//            sprintf(
-//                '[National Grid] updateDemand $filtered_data=%s',
-//                print_r($filtered_data, true)
-//            )
-//        );
-
         $written = self::updatePastTimeSeries( 'past_half_hours', $columns, $filtered_data );
         if ( false === $written ) {
             return false;
@@ -236,8 +229,8 @@ class DatabaseStorage {
         return ' ON DUPLICATE KEY UPDATE ' . implode( ', ', $parts );
     }
 
-    /** Returns the latest half hour, as a YYYY-MM-DD HH:MM:SS string. */
-    public static function getLatestHalfHour(): string {
+    /** Returns the latest half-hour, as a YYYY-MM-DD HH:MM:SS string. */
+    private static function getLatestHalfHour(): string {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'national_grid_past_half_hours';
@@ -275,7 +268,7 @@ class DatabaseStorage {
      * value represents the latest midnight more than four weeks ago; this ensures
      * that the half-hourly data represents complete days for aggregation.
      */
-    public static function getEarliestHalfHour(): string {
+    private static function getEarliestHalfHour(): string {
         $now = time();
         $four_weeks_ago_midnight = gmmktime(
             0,
@@ -290,7 +283,7 @@ class DatabaseStorage {
     }
 
     /** Deletes old half-hourly data to reduce the size of the database. */
-    public static function deleteOldHalfHours() {
+    private static function deleteOldHalfHours() {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'national_grid_past_half_hours';
