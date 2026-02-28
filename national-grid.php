@@ -18,6 +18,7 @@ define( 'NATIONAL_GRID_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'NATIONAL_GRID_OPTION_TIMEOUT', 'national_grid_timeout' );
 define( 'NATIONAL_GRID_OPTION_MODULE_TITLE', 'national_grid_module_title' );
 define( 'NATIONAL_GRID_OPTION_MODULE_DESCRIPTION', 'national_grid_module_description' );
+define( 'NATIONAL_GRID_OPTION_AUTO_UPDATE', 'national_grid_auto_update' );
 
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/DataException.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Time.php';
@@ -98,6 +99,19 @@ function national_grid_create_tables() {
         "  greenlink decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
         "  PRIMARY KEY (time)\n" .
         ") $charset_collate;",
+
+        "CREATE TABLE {$prefix}logs (\n" .
+        "  id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
+        "  created_at datetime NOT NULL,\n" .
+        "  source varchar(16) NOT NULL,\n" .
+        "  status varchar(16) NOT NULL,\n" .
+        "  message text NOT NULL,\n" .
+        "  context longtext NULL,\n" .
+        "  PRIMARY KEY (id),\n" .
+        "  KEY created_at (created_at),\n" .
+        "  KEY status (status),\n" .
+        "  KEY source (source)\n" .
+        ") $charset_collate;",
     ];
 
     foreach ($tables as $sql) {
@@ -107,7 +121,7 @@ function national_grid_create_tables() {
 
 function national_grid_activate() {
     if ( false === get_option( NATIONAL_GRID_OPTION_TIMEOUT, false ) ) {
-        add_option( NATIONAL_GRID_OPTION_TIMEOUT, 30 );
+        add_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 );
     }
 
     if ( false === get_option( NATIONAL_GRID_OPTION_MODULE_TITLE, false ) ) {
@@ -116,6 +130,10 @@ function national_grid_activate() {
 
     if ( false === get_option( NATIONAL_GRID_OPTION_MODULE_DESCRIPTION, false ) ) {
         add_option( NATIONAL_GRID_OPTION_MODULE_DESCRIPTION, '' );
+    }
+
+    if ( false === get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, false ) ) {
+        add_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 );
     }
 
     national_grid_create_tables();

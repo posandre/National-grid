@@ -87,7 +87,7 @@ class Demand {
   private static function getDatum(array $item): array {
     for ($i = 2; $i <= 3; $i ++) {
       if (!ctype_digit($item[$i])) {
-        throw new DataException('Non-integer value: ' . $item[$i]);
+        throw new DataException('Demand data: Non-integer value: ' . $item[$i]);
       }
     }
 

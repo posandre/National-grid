@@ -5,6 +5,64 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class DatabaseStorage {
+    private const STATUS_SUCCESS = 'success';
+    private const STATUS_ERROR = 'error';
+
+    private static function getLogsTableName() {
+        global $wpdb;
+
+        return $wpdb->prefix . 'national_grid_logs';
+    }
+
+    public static function logSuccess( $source, $message, array $context = array() ) {
+        return self::logEvent( $source, self::STATUS_SUCCESS, $message, $context );
+    }
+
+    public static function logError( $source, $message, array $context = array() ) {
+        return self::logEvent( $source, self::STATUS_ERROR, $message, $context );
+    }
+
+    public static function logEvent( $source, $status, $message, array $context = array() ) {
+        global $wpdb;
+
+        $table_name = self::getLogsTableName();
+        $result = $wpdb->insert(
+            $table_name,
+            array(
+                'created_at' => gmdate( 'Y-m-d H:i:s' ),
+                'source' => sanitize_key( (string) $source ),
+                'status' => sanitize_key( (string) $status ),
+                'message' => sanitize_text_field( (string) $message ),
+                'context' => wp_json_encode( $context ),
+            ),
+            array( '%s', '%s', '%s', '%s', '%s' )
+        );
+
+        return false !== $result;
+    }
+
+    public static function getRecentLogs( $limit = 200 ) {
+        global $wpdb;
+
+        $limit = max( 1, (int) $limit );
+        $table_name = self::getLogsTableName();
+        $sql = $wpdb->prepare(
+            'SELECT `id`, `created_at`, `source`, `status`, `message`, `context` FROM `' . esc_sql( $table_name ) . '` ORDER BY `id` DESC LIMIT %d',
+            $limit
+        );
+
+        $rows = $wpdb->get_results( $sql, ARRAY_A );
+
+        return is_array( $rows ) ? $rows : array();
+    }
+
+    public static function clearLogs() {
+        global $wpdb;
+
+        $table_name = self::getLogsTableName();
+        return $wpdb->query( 'DELETE FROM `' . esc_sql( $table_name ) . '`' );
+    }
+
     /**
      * Returns true when both generation tables use InnoDB and transactions are safe.
      */
@@ -33,7 +91,7 @@ class DatabaseStorage {
     }
 
     /**
-     * @throws Throwable
+     * @throws DataException
      */
     public static function updateGeneration($data) {
         global $wpdb;
@@ -75,7 +133,7 @@ class DatabaseStorage {
             if ( $use_transaction ) {
                 $wpdb->query( 'ROLLBACK' );
             }
-            throw $e;
+            throw new DataException( 'Failed to update generation data in storage.', 0, $e );
         }
 
         return [
@@ -170,6 +228,9 @@ class DatabaseStorage {
         return $wpdb->query( $sql );
     }
 
+    /**
+     * @throws DataException
+     */
     public static function updateDemand(array $data) {
         global $wpdb;
 
@@ -202,7 +263,7 @@ class DatabaseStorage {
             if ( $use_transaction ) {
                 $wpdb->query( 'ROLLBACK' );
             }
-            throw $e;
+            throw new DataException( 'Failed to update demand data in storage.', 0, $e );
         }
 
         return [

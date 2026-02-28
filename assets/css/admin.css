@@ -27,3 +27,23 @@
 .national-grid-admin-message {
     margin-top: 10px;
 }
+
+.national-grid-admin-log-section {
+    margin-top: 24px;
+}
+
+.national-grid-admin-log-clear-form {
+    margin-bottom: 12px;
+}
+
+.national-grid-admin-log-table td {
+    vertical-align: top;
+}
+
+.national-grid-log-row-error {
+    background-color: #ffe9e9 !important;
+}
+
+.national-grid-log-row-success {
+    background-color: #f6fff7 !important;
+}

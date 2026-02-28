@@ -67,20 +67,20 @@ class Generation {
     );
 
     if ($rawData === false) {
-      throw new DataException('Failed to read data');
+        throw new DataException( 'Generation data: Failed to read generatiob data from data.elexon.co.uk.' );
     }
 
     $jsonData = json_decode($rawData, true);
 
     if (!is_array($jsonData)) {
-      throw new DataException('Missing data');
+      throw new DataException('Generation data: Missing data');
     }
 
     $data = [];
 
     foreach ($jsonData as $item) {
       if (!is_array($item)) {
-        throw new DataException('Invalid item');
+        throw new DataException('Generation data: Invalid item');
       }
 
       $time = self::getTime($item);
@@ -111,7 +111,7 @@ class Generation {
     $time = $item['startTime'];
 
     if (!is_string($time)) {
-      throw new DataException('Invalid start time: ' . $time);
+      throw new DataException('Generation data: Invalid start time: ' . $time);
     }
 
     return Time::normalise($item['startTime'], 5);
@@ -126,13 +126,13 @@ class Generation {
    */
   private static function getColumn(array $item): int {
     if (!isset($item['fuelType'])) {
-      throw new DataException('Missing fuel type');
+      throw new DataException('Generation data: Missing fuel type');
     }
 
     $fuelType = $item['fuelType'];
 
     if (!is_string($fuelType) || !isset(self::COLUMNS[$fuelType])) {
-      throw new DataException('Invalid fuel type: ' . $fuelType);
+      throw new DataException('Generation data: Invalid fuel type: ' . $fuelType);
     }
 
     return self::COLUMNS[$fuelType];
