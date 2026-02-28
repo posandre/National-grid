@@ -83,7 +83,7 @@ class Time {
     }
 
     return gmdate(
-      '"Y-m-d H:i:s"',
+      'Y-m-d H:i:s',
       mktime(0, 0, 0, $month, $day, $year) + ($period - 1) * 1800
     );
   }

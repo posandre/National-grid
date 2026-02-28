@@ -19,10 +19,16 @@
                 $message
                     .addClass('notice ' + (isSuccess ? 'notice-success' : 'notice-error') + ' inline')
                     .html('<p>' + message + '</p>');
-            }).fail(function () {
+            }).fail(function (xhr) {
+                var message = nationalGridAdmin.unknownError;
+
+                if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                    message = xhr.responseJSON.data.message;
+                }
+
                 $message
                     .addClass('notice notice-error inline')
-                    .html('<p>' + nationalGridAdmin.unknownError + '</p>');
+                    .html('<p>' + message + '</p>');
             }).always(function () {
                 $loader.removeClass('is-active');
                 $button.prop('disabled', false);

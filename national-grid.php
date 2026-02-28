@@ -21,7 +21,10 @@ define( 'NATIONAL_GRID_OPTION_MODULE_DESCRIPTION', 'national_grid_module_descrip
 
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/DataException.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Time.php';
+require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Csv.php';
+require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/DatabaseStorage.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Generation.php';
+require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Demand.php';
 
 require_once NATIONAL_GRID_PLUGIN_DIR . 'includes/class-national-grid-admin.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'includes/class-national-grid-shortcodes.php';
@@ -65,6 +68,37 @@ function national_grid_create_tables() {
         "  eleclink decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
         "  viking decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
         "  greenlink decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  PRIMARY KEY (time)\n" .
+        ") $charset_collate;",
+
+        "CREATE TABLE {$prefix}past_half_hours (\n" .
+        "  time datetime NOT NULL,\n" .
+        "  embedded_wind decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  embedded_solar decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  coal decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  ccgt decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  ocgt decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  nuclear decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  oil decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  wind decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  hydro decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  pumped decimal(4,2) NOT NULL DEFAULT 0.00,\n" .
+        "  biomass decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  battery decimal(4,2) NOT NULL DEFAULT 0.00,\n" .
+        "  other decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
+        "  ifa decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  moyle decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  britned decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  ewic decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  nemo decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  ifa2 decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  nsl decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  eleclink decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  viking decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  greenlink decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
+        "  price decimal(7,2) NOT NULL DEFAULT 0.00,\n" .
+        "  emissions smallint(5) UNSIGNED NOT NULL DEFAULT 0,\n" .
+        "  visits int(10) UNSIGNED NOT NULL DEFAULT 0,\n" .
         "  PRIMARY KEY (time)\n" .
         ") $charset_collate;",
     ];

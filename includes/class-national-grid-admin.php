@@ -128,9 +128,8 @@ class National_Grid_Admin {
 
     public static function update_data() {
         try {
-            $new_generation = Generation::update();
-            $rows_written = self::write_generation_to_past_five_minutes( $new_generation );
-            $deleted_rows = self::delete_old_generation_data();
+            $rows_written = Generation::update();
+            $result_demand = Demand::update();
 
             if ( false === $rows_written ) {
                 return array(
@@ -140,11 +139,11 @@ class National_Grid_Admin {
                 );
             }
 
-            if ( false === $deleted_rows ) {
+            if ( empty( $result_demand['success'] ) ) {
                 return array(
                     'success' => false,
-                    'rows' => 0,
-                    'message' => __( 'Failed to delete old data from database.', 'national-grid' ),
+                    'rows' => $rows_written,
+                    'message' => __( 'Generation updated, but demand update failed.', 'national-grid' ),
                 );
             }
 
@@ -152,11 +151,14 @@ class National_Grid_Admin {
                 'success' => true,
                 'rows' => $rows_written,
                 'message' => sprintf(
-                    /* translators: 1: number of saved rows, 2: number of deleted rows */
-                    __( 'Data updated successfully.<br> <strong>Saved rows</strong>: %1$d. <br><strong>Deleted old rows</strong>: %2$d.', 'national-grid' ),
-                    $rows_written,
-                    $deleted_rows
-                ),
+                    /* translators: 1: generation rows, 2: demand written rows, 3: demand read rows, 4: demand valid rows, 5: demand skipped rows */
+                    __( 'Data updated successfully.<br><strong>Generation rows</strong>: %1$d.<br><strong>Demand written</strong>: %2$d (read: %3$d, valid: %4$d, skipped: %5$d).', 'national-grid' ),
+                    (int) $rows_written,
+                    isset( $result_demand['written'] ) ? (int) $result_demand['written'] : 0,
+                    isset( $result_demand['read'] ) ? (int) $result_demand['read'] : 0,
+                    isset( $result_demand['valid'] ) ? (int) $result_demand['valid'] : 0,
+                    isset( $result_demand['skipped'] ) ? (int) $result_demand['skipped'] : 0,
+                )
             );
         } catch ( Throwable $e ) {
             return array(
@@ -165,95 +167,6 @@ class National_Grid_Admin {
                 'message' => $e->getMessage(),
             );
         }
-    }
-
-    /**
-     * Writes generation rows into the past_five_minutes table.
-     *
-     * Maps Generation::COLUMNS (source indexes) to Generation::KEYS (table columns).
-     *
-     * @param array $new_generation Generation rows indexed by time.
-     *
-     * @return int|false Number of written rows or false on database error.
-     */
-    private static function write_generation_to_past_five_minutes( array $new_generation ) {
-        global $wpdb;
-
-        $table_name = $wpdb->prefix . 'national_grid_past_five_minutes';
-        $column_to_key_map = array();
-
-        foreach ( Generation::COLUMNS as $column_index ) {
-            if ( isset( Generation::KEYS[ $column_index - 1 ] ) ) {
-                $column_to_key_map[ $column_index ] = Generation::KEYS[ $column_index - 1 ];
-            }
-        }
-
-        if ( empty( $column_to_key_map ) ) {
-            return 0;
-        }
-
-        $columns = array_merge( array( 'time' ), array_values( $column_to_key_map ) );
-        $column_sql = '`' . implode( '`, `', array_map( 'esc_sql', $columns ) ) . '`';
-        $table_sql = '`' . esc_sql( $table_name ) . '`';
-
-        $single_row_placeholders = '(' . implode( ', ', array_merge( array( '%s' ), array_fill( 0, count( $columns ) - 1, '%f' ) ) ) . ')';
-        $rows_placeholders = array();
-        $query_values = array();
-        $valid_rows_count = 0;
-
-        foreach ( $new_generation as $row ) {
-            if ( ! is_array( $row ) || ! isset( $row[0] ) || ! is_string( $row[0] ) ) {
-                continue;
-            }
-
-            $rows_placeholders[] = $single_row_placeholders;
-            $query_values[] = $row[0];
-
-            foreach ( $column_to_key_map as $column_index => $key ) {
-                $query_values[] = isset( $row[ $column_index ] ) ? (float) $row[ $column_index ] : 0.0;
-            }
-
-            $valid_rows_count++;
-        }
-
-        if ( 0 === $valid_rows_count ) {
-            return 0;
-        }
-
-        $update_parts = array();
-        foreach ( array_slice( $columns, 1 ) as $column_name ) {
-            $escaped_column = '`' . esc_sql( $column_name ) . '`';
-            $update_parts[] = $escaped_column . ' = VALUES(' . $escaped_column . ')';
-        }
-
-        $sql = "INSERT INTO {$table_sql} ({$column_sql}) VALUES " . implode( ', ', $rows_placeholders ) . ' ON DUPLICATE KEY UPDATE ' . implode( ', ', $update_parts );
-        $prepared_sql = $wpdb->prepare( $sql, $query_values );
-        $result = $wpdb->query( $prepared_sql );
-
-        if ( false === $result ) {
-            return false;
-        }
-
-        return $valid_rows_count;
-    }
-
-    /**
-     * Deletes generation rows older than 24 hours.
-     *
-     * @return int|false Number of deleted rows or false on database error.
-     */
-    private static function delete_old_generation_data() {
-        global $wpdb;
-
-        $table_name = $wpdb->prefix . 'national_grid_past_five_minutes';
-        $cutoff_time = gmdate( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS );
-
-        $sql = $wpdb->prepare(
-            'DELETE FROM `' . esc_sql( $table_name ) . '` WHERE `time` < %s',
-            $cutoff_time
-        );
-
-        return $wpdb->query( $sql );
     }
 
     public static function handle_update_data() {

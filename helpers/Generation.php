@@ -56,7 +56,7 @@ class Generation {
    *
    * @throws DataException If the data was invalid
    */
-  public static function update(): array {
+  public static function update() {
     $rawData = @file_get_contents(
       sprintf(
         'https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST/stream?publishDateTimeFrom=%s&publishDateTimeTo=%s',
@@ -92,7 +92,10 @@ class Generation {
       $data[$time][self::getColumn($item)] = self::getGeneration($item);
     }
 
-    return $data;
+    $rows_written = DatabaseStorage::updateGeneration( $data );
+    DatabaseStorage::deleteOldGeneratin();
+
+    return $rows_written;
   }
 
   /**
