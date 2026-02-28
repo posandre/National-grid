@@ -96,9 +96,6 @@ function national_grid_create_tables() {
         "  eleclink decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
         "  viking decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
         "  greenlink decimal(3,2) NOT NULL DEFAULT 0.00,\n" .
-        "  price decimal(7,2) NOT NULL DEFAULT 0.00,\n" .
-        "  emissions smallint(5) UNSIGNED NOT NULL DEFAULT 0,\n" .
-        "  visits int(10) UNSIGNED NOT NULL DEFAULT 0,\n" .
         "  PRIMARY KEY (time)\n" .
         ") $charset_collate;",
     ];

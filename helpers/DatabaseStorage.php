@@ -131,7 +131,17 @@ class DatabaseStorage {
 //            )
 //        );
 
-        return self::updatePastTimeSeries( 'past_half_hours', $columns, $filtered_data );
+        $written = self::updatePastTimeSeries( 'past_half_hours', $columns, $filtered_data );
+        if ( false === $written ) {
+            return false;
+        }
+
+        $deleted = self::deleteOldHalfHours();
+        if ( false === $deleted ) {
+            return false;
+        }
+
+        return $written;
     }
 
     /**
@@ -285,5 +295,154 @@ class DatabaseStorage {
         );
 
         return gmdate( 'Y-m-d H:i:s', $four_weeks_ago_midnight );
+    }
+
+    /** Deletes old half-hourly data to reduce the size of the database. */
+    public static function deleteOldHalfHours() {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'national_grid_past_half_hours';
+        $cutoff_time = self::getEarliestHalfHour();
+
+        $sql = $wpdb->prepare(
+            'DELETE FROM `' . esc_sql( $table_name ) . '` WHERE `time` < %s',
+            $cutoff_time
+        );
+
+        return $wpdb->query( $sql );
+    }
+
+    private static function getLatestMap( string $table ): array {
+        global $wpdb;
+
+        $safe_table = preg_replace( '/[^a-z0-9_]/i', '', $table );
+        if ( '' === $safe_table ) {
+            return array( 'time' => '0000-00-00 00:00:00' );
+        }
+
+        $table_name = ( 0 === strpos( $safe_table, $wpdb->prefix ) ) ? $safe_table : $wpdb->prefix . 'national_grid_' . $safe_table;
+        $map = $wpdb->get_row(
+            'SELECT * FROM `' . esc_sql( $table_name ) . '` ORDER BY `time` DESC LIMIT 1',
+            ARRAY_A
+        );
+
+        if ( is_array( $map ) ) {
+            return $map;
+        }
+
+        // Default zero values for new instances with an empty database.
+        $columns = array_unique( array_merge( Generation::KEYS, Demand::KEYS ) );
+        $default_map = array_fill_keys( $columns, '0' );
+        $default_map['time'] = '0000-00-00 00:00:00';
+
+        return $default_map;
+    }
+
+    private static function getAveragesExpression( array $columns ): string {
+        return implode(
+            ', ',
+            array_map(
+                static function ( $column ) {
+                    $safe_column = '`' . preg_replace( '/[^a-z0-9_]/i', '', (string) $column ) . '`';
+                    return 'AVG(' . $safe_column . ') AS ' . $safe_column;
+                },
+                $columns
+            )
+        );
+    }
+
+    /**
+     * Aggregates generation data from the five-minute time series into the
+     * half-hour time series, propagating forward the most recent half-hour
+     * non-generation values.
+     */
+    public static function aggregateGeneration() {
+        global $wpdb;
+
+        $past_half_hours = $wpdb->prefix . 'national_grid_past_half_hours';
+        $past_five_minutes = $wpdb->prefix . 'national_grid_past_five_minutes';
+
+        // store the most recent half-hour values so we can propagate them forwards
+        $previous_half_hour = self::getLatestMap( 'past_half_hours' );
+
+        // To determine the latest complete half-hour, we subtract 25 minutes from
+        // the most recent time and then round down to a multiple of 30 minutes.
+        // This works because a half-hour is complete once the five-minute period
+        // starting at 25 or 55 minutes past the hour is available.
+        $latest_half_hour = $wpdb->get_var(
+            'SELECT DATE_SUB(`time`, INTERVAL MOD(MINUTE(`time`), 30) MINUTE)
+             FROM (
+                SELECT DATE_SUB(MAX(`time`), INTERVAL 25 MINUTE) AS `time`
+                FROM `' . esc_sql( $past_five_minutes ) . '`
+             ) AS t'
+        );
+
+        if ( ! is_string( $latest_half_hour ) || '' === $latest_half_hour ) {
+            return 0;
+        }
+
+        // aggregate the five-minute data for complete half-hours
+        $generation_columns_sql = '`' . implode(
+            '`, `',
+            array_map(
+                static function ( $column ) {
+                    return preg_replace( '/[^a-z0-9_]/i', '', (string) $column );
+                },
+                Generation::KEYS
+            )
+        ) . '`';
+
+        $aggregate_sql = 'INSERT INTO `'
+            . esc_sql( $past_half_hours )
+            . '` (`time`, '
+            . $generation_columns_sql
+            . ') SELECT DATE_SUB(`time`, INTERVAL MOD(MINUTE(`time`), 30) MINUTE) AS aggregated_time, '
+            . self::getAveragesExpression( Generation::KEYS )
+            . ' FROM `'
+            . esc_sql( $past_five_minutes )
+            . '` GROUP BY aggregated_time HAVING aggregated_time <= %s'
+            . self::getOnDuplicateKeyUpdateClause( Generation::KEYS );
+
+        $prepared_aggregate_sql = $wpdb->prepare( $aggregate_sql, $latest_half_hour );
+        if ( false === $wpdb->query( $prepared_aggregate_sql ) ) {
+            return false;
+        }
+
+        // propagate forwards the non-generation data for newly inserted half-hours
+        if ( empty( Demand::KEYS ) ) {
+            return true;
+        }
+
+        $set_clauses = array();
+        $set_values = array();
+        foreach ( Demand::KEYS as $column ) {
+            $safe_column = preg_replace( '/[^a-z0-9_]/i', '', (string) $column );
+            if ( '' === $safe_column ) {
+                continue;
+            }
+
+            $set_clauses[] = '`' . $safe_column . '` = %f';
+            $set_values[] = isset( $previous_half_hour[ $safe_column ] ) ? (float) $previous_half_hour[ $safe_column ] : 0.0;
+        }
+
+        if ( empty( $set_clauses ) ) {
+            return true;
+        }
+
+        $update_sql = 'UPDATE `'
+            . esc_sql( $past_half_hours )
+            . '` SET '
+            . implode( ', ', $set_clauses )
+            . ' WHERE `time` > %s';
+        $set_values[] = isset( $previous_half_hour['time'] ) ? (string) $previous_half_hour['time'] : '0000-00-00 00:00:00';
+
+        $prepared_update_sql = $wpdb->prepare( $update_sql, $set_values );
+        $result = $wpdb->query( $prepared_update_sql );
+
+        if ( false === $result ) {
+            return false;
+        }
+
+        return true;
     }
 }

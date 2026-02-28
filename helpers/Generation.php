@@ -94,6 +94,7 @@ class Generation {
 
     $rows_written = DatabaseStorage::updateGeneration( $data );
     DatabaseStorage::deleteOldGeneratin();
+    DatabaseStorage::aggregateGeneration();
 
     return $rows_written;
   }
