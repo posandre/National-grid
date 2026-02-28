@@ -39,13 +39,6 @@ function national_grid_create_tables() {
     $prefix = $wpdb->prefix . 'national_grid_';
 
     $tables = [
-        "CREATE TABLE {$prefix}errors (\n" .
-        "  action varchar(32) NOT NULL,\n" .
-        "  error varchar(128) NOT NULL,\n" .
-        "  count tinyint(3) UNSIGNED NOT NULL,\n" .
-        "  PRIMARY KEY (action,error)\n" .
-        ") $charset_collate;",
-
         "CREATE TABLE {$prefix}past_five_minutes (\n" .
         "  time datetime NOT NULL,\n" .
         "  coal decimal(4,2) UNSIGNED NOT NULL DEFAULT 0.00,\n" .
