@@ -24,6 +24,11 @@
 
                 if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
                     message = xhr.responseJSON.data.message;
+                } else if (xhr && xhr.responseText) {
+                    var raw = String(xhr.responseText).trim();
+                    if (raw.length > 0) {
+                        message = raw.substring(0, 300);
+                    }
                 }
 
                 $message

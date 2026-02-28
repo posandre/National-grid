@@ -116,14 +116,6 @@ class DatabaseStorage {
             )
         );
 
-        error_log(
-            sprintf(
-                '[National Grid] updateDemand $earliest=%s $latest=%s',
-                $earliest,
-                $latest
-            )
-        );
-//
 //        error_log(
 //            sprintf(
 //                '[National Grid] updateDemand $filtered_data=%s',
@@ -183,12 +175,12 @@ class DatabaseStorage {
         $rows_placeholders = array();
         $query_values = array();
 
-        error_log(
-            sprintf(
-                '[National Grid] updatePastTimeSeries $filtered_data=%s',
-                print_r($data, true)
-            )
-        );
+//        error_log(
+//            sprintf(
+//                '[National Grid] updatePastTimeSeries $filtered_data=%s',
+//                print_r($data, true)
+//            )
+//        );
 
         foreach ( $data as $datum ) {
             if ( ! is_array( $datum ) || count( $datum ) < count( $safe_columns ) + 1 || ! isset( $datum[0] ) ) {
@@ -265,15 +257,15 @@ class DatabaseStorage {
             }
         }
 
-        error_log(
-            sprintf(
-                '[National Grid] getLatestHalfHour result=%s source=%s table_max=%s current_half_hour=%s',
-                $latest_half_hour,
-                $source,
-                is_string( $latest_from_table ) && '' !== $latest_from_table ? $latest_from_table : 'null',
-                $current_half_hour
-            )
-        );
+//        error_log(
+//            sprintf(
+//                '[National Grid] getLatestHalfHour result=%s source=%s table_max=%s current_half_hour=%s',
+//                $latest_half_hour,
+//                $source,
+//                is_string( $latest_from_table ) && '' !== $latest_from_table ? $latest_from_table : 'null',
+//                $current_half_hour
+//            )
+//        );
 
         return $latest_half_hour;
     }

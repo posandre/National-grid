@@ -197,7 +197,14 @@ class National_Grid_Admin {
             );
         }
 
-        check_ajax_referer( self::UPDATE_ACTION, 'nonce' );
+        if ( ! check_ajax_referer( self::UPDATE_ACTION, 'nonce', false ) ) {
+            wp_send_json_error(
+                array(
+                    'message' => __( 'Nonce mismatch. Please refresh the page and try again.', 'national-grid' ),
+                ),
+                403
+            );
+        }
 
         $updated = self::update_data();
 
