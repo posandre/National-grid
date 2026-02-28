@@ -6,15 +6,95 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class DatabaseStorage {
     /**
+     * Returns true when both generation tables use InnoDB and transactions are safe.
+     */
+    public static function canUseGenerationTransactions(): bool {
+        global $wpdb;
+
+        $tables = array(
+            $wpdb->prefix . 'national_grid_past_five_minutes',
+            $wpdb->prefix . 'national_grid_past_half_hours',
+        );
+
+        foreach ( $tables as $table_name ) {
+            $sql = $wpdb->prepare( 'SHOW TABLE STATUS LIKE %s', $table_name );
+            $status = $wpdb->get_row( $sql, ARRAY_A );
+
+            if ( ! is_array( $status ) || empty( $status['Engine'] ) ) {
+                return false;
+            }
+
+            if ( 'InnoDB' !== (string) $status['Engine'] ) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @throws Throwable
+     */
+    public static function updateGeneration($data) {
+        global $wpdb;
+
+        $use_transaction = self::canUseGenerationTransactions();
+        if ( $use_transaction ) {
+            $wpdb->query( 'START TRANSACTION' );
+        }
+
+        try {
+            $rows_written = self::updateGenerationData( $data );
+            if ( false === $rows_written ) {
+                if ( $use_transaction ) {
+                    $wpdb->query( 'ROLLBACK' );
+                }
+                return false;
+            }
+
+            $aggregated = self::aggregateGeneration();
+            if ( false === $aggregated ) {
+                if ( $use_transaction ) {
+                    $wpdb->query( 'ROLLBACK' );
+                }
+                return false;
+            }
+
+            $deleted = self::deleteOldGeneration();
+            if ( false === $deleted ) {
+                if ( $use_transaction ) {
+                    $wpdb->query( 'ROLLBACK' );
+                }
+                return false;
+            }
+
+            if ( $use_transaction ) {
+                $wpdb->query( 'COMMIT' );
+            }
+        } catch (Throwable $e) {
+            if ( $use_transaction ) {
+                $wpdb->query( 'ROLLBACK' );
+            }
+            throw $e;
+        }
+
+        return [
+            'rows_written' =>  $rows_written,
+            'rows_aggregated' =>  $aggregated,
+            'rows_deleted' =>  $deleted,
+        ];
+    }
+
+    /**
      * Writes generation rows into the past_five_minutes table.
      *
      * Maps Generation::COLUMNS (source indexes) to Generation::KEYS (table columns).
      *
-     * @param array $new_generation Generation rows indexed by time.
+     * @param array $data Generation rows indexed by time.
      *
      * @return int|false Number of written rows or false on database error.
      */
-    public static function updateGeneration( array $new_generation ):int {
+    private static function updateGenerationData( array $data ) {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'national_grid_past_five_minutes';
@@ -39,7 +119,7 @@ class DatabaseStorage {
         $query_values = array();
         $valid_rows_count = 0;
 
-        foreach ( $new_generation as $row ) {
+        foreach ( $data as $row ) {
             if ( ! is_array( $row ) || ! isset( $row[0] ) || ! is_string( $row[0] ) ) {
                 continue;
             }
@@ -74,9 +154,9 @@ class DatabaseStorage {
     /**
      * Deletes generation rows older than 24 hours.
      *
-     * @return void Number of deleted rows or false on database error.
+     * @return int|false Number of deleted rows or false on database error.
      */
-    public static function deleteOldGeneratin():void {
+    private static function deleteOldGeneration() {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'national_grid_past_five_minutes';
@@ -87,17 +167,57 @@ class DatabaseStorage {
             $cutoff_time
         );
 
-        $wpdb->query( $sql );
+        return $wpdb->query( $sql );
+    }
+
+    public static function updateDemand(array $data) {
+        global $wpdb;
+
+        $use_transaction = self::canUseGenerationTransactions();
+        if ( $use_transaction ) {
+            $wpdb->query( 'START TRANSACTION' );
+        }
+
+        try {
+            $rows_written = self::updateDemandData( $data );
+            if ( false === $rows_written ) {
+                if ( $use_transaction ) {
+                    $wpdb->query( 'ROLLBACK' );
+                }
+                return false;
+            }
+
+            $deleted = self::deleteOldHalfHours();
+            if ( false === $deleted ) {
+                if ( $use_transaction ) {
+                    $wpdb->query( 'ROLLBACK' );
+                }
+                return false;
+            }
+
+            if ( $use_transaction ) {
+                $wpdb->query( 'COMMIT' );
+            }
+        } catch (Throwable $e) {
+            if ( $use_transaction ) {
+                $wpdb->query( 'ROLLBACK' );
+            }
+            throw $e;
+        }
+
+        return [
+            'rows_written' =>  $rows_written,
+            'rows_deleted' =>  $deleted,
+        ];
     }
 
     /**
-     * Updates data, ignoring data prior to the earliest half hour or past the
-     * latest half hour.
+     * Updates data, ignoring data prior to the earliest half-hour or past the
+     * latest half-hour.
      *
-     * @param array $columns The columns to update
      * @param array $data    The data
      */
-    public static function updateDemand(array $columns, array $data) {
+    private static function updateDemandData(array $data) {
         $earliest = self::getEarliestHalfHour();
         $latest = self::getLatestHalfHour();
 
@@ -116,13 +236,8 @@ class DatabaseStorage {
             )
         );
 
-        $written = self::updatePastTimeSeries( 'past_half_hours', $columns, $filtered_data );
+        $written = self::updatePastTimeSeries( 'past_half_hours', Demand::KEYS, $filtered_data );
         if ( false === $written ) {
-            return false;
-        }
-
-        $deleted = self::deleteOldHalfHours();
-        if ( false === $deleted ) {
             return false;
         }
 
@@ -167,13 +282,6 @@ class DatabaseStorage {
         $single_row_placeholders = '(' . implode( ', ', array_merge( array( '%s' ), array_fill( 0, count( $safe_columns ), '%f' ) ) ) . ')';
         $rows_placeholders = array();
         $query_values = array();
-
-//        error_log(
-//            sprintf(
-//                '[National Grid] updatePastTimeSeries $filtered_data=%s',
-//                print_r($data, true)
-//            )
-//        );
 
         foreach ( $data as $datum ) {
             if ( ! is_array( $datum ) || count( $datum ) < count( $safe_columns ) + 1 || ! isset( $datum[0] ) ) {
@@ -341,7 +449,7 @@ class DatabaseStorage {
      * half-hour time series, propagating forward the most recent half-hour
      * non-generation values.
      */
-    public static function aggregateGeneration() {
+    private static function aggregateGeneration() {
         global $wpdb;
 
         $past_half_hours = $wpdb->prefix . 'national_grid_past_half_hours';

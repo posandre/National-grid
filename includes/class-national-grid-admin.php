@@ -128,42 +128,51 @@ class National_Grid_Admin {
 
     public static function update_data() {
         try {
-            $rows_written = Generation::update();
-            $result_demand = Demand::update();
+            $generation_update_result = Generation::update();
+            $demand_update_result = Demand::update();
 
-            if ( false === $rows_written ) {
+            if (
+                ! is_array( $generation_update_result )
+                || ! isset( $generation_update_result['rows_written'], $generation_update_result['rows_aggregated'], $generation_update_result['rows_deleted'] )
+            ) {
                 return array(
                     'success' => false,
-                    'rows' => 0,
                     'message' => __( 'Failed to write data to database.', 'national-grid' ),
                 );
             }
 
-            if ( empty( $result_demand['success'] ) ) {
+            if (
+                ! is_array( $demand_update_result )
+                || empty( $demand_update_result['success'] )
+                || ! isset( $demand_update_result['rows_written'], $demand_update_result['rows_deleted'], $demand_update_result['read'], $demand_update_result['valid'], $demand_update_result['skipped'] )
+            ) {
                 return array(
                     'success' => false,
-                    'rows' => $rows_written,
                     'message' => __( 'Generation updated, but demand update failed.', 'national-grid' ),
                 );
             }
 
             return array(
                 'success' => true,
-                'rows' => $rows_written,
                 'message' => sprintf(
-                    /* translators: 1: generation rows, 2: demand written rows, 3: demand read rows, 4: demand valid rows, 5: demand skipped rows */
-                    __( 'Data updated successfully.<br><strong>Generation rows</strong>: %1$d.<br><strong>Demand written</strong>: %2$d (read: %3$d, valid: %4$d, skipped: %5$d).', 'national-grid' ),
-                    (int) $rows_written,
-                    isset( $result_demand['written'] ) ? (int) $result_demand['written'] : 0,
-                    isset( $result_demand['read'] ) ? (int) $result_demand['read'] : 0,
-                    isset( $result_demand['valid'] ) ? (int) $result_demand['valid'] : 0,
-                    isset( $result_demand['skipped'] ) ? (int) $result_demand['skipped'] : 0,
+                    /* translators: 1: generation written rows, 2: generation aggregated rows, 3: generation deleted rows, 4: demand written rows, 5: demand deleted rows, 6: demand read rows, 7: demand valid rows, 8: demand skipped rows */
+                    __( 'Data updated successfully.<br><br><strong>1. Generation update:</strong> <br>— rows written: %1$d,<br>— rows aggregated: %2$d,<br>— rows deleted: %3$d.<br><br><strong>2. Demand update:</strong><br>— rows written: %4$d,<br>— rows deleted: %5$d<br>CSV file: read: %6$d, valid: %7$d, skipped: %8$d.', 'national-grid' ),
+                    (int) $generation_update_result['rows_written'],
+                    (int) $generation_update_result['rows_aggregated'],
+                    (int) $generation_update_result['rows_deleted'],
+                    (int) $demand_update_result['rows_written'],
+                    (int) $demand_update_result['rows_deleted'],
+                    (int) $demand_update_result['read'],
+                    (int) $demand_update_result['valid'],
+                    (int) $demand_update_result['skipped']
                 )
             );
         } catch ( Throwable $e ) {
             return array(
                 'success' => false,
-                'rows' => 0,
+                'rows_written' => 0,
+                'rows_aggregated' => 0,
+                'rows_deleted' => 0,
                 'message' => $e->getMessage(),
             );
         }

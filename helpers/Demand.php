@@ -14,7 +14,8 @@ class Demand {
    *   read:int,
    *   valid:int,
    *   skipped:int,
-   *   written:int,
+   *   rows_written:int,
+   *   rows_deleted:int,
    *   success:bool
    * }
    *
@@ -63,14 +64,16 @@ class Demand {
       }
     }
 
-    $written = DatabaseStorage::updateDemand(self::KEYS, $validData);
+    $update_result = DatabaseStorage::updateDemand($validData);
+    $is_success = is_array($update_result) && isset($update_result['rows_written'], $update_result['rows_deleted']);
 
     return [
       'read' => count($rows),
       'valid' => count($validData),
       'skipped' => $skipped,
-      'written' => false === $written ? 0 : $written,
-      'success' => false !== $written,
+      'rows_written' => $is_success ? (int) $update_result['rows_written'] : 0,
+      'rows_deleted' => $is_success ? (int) $update_result['rows_deleted'] : 0,
+      'success' => $is_success,
     ];
   }
 

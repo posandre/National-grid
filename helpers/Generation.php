@@ -49,13 +49,14 @@ class Generation {
     'INTGRNL' => 21
   ];
 
-  /**
-   * Updates the generation data.
-   *
-   * @param Database $database The database instance
-   *
-   * @throws DataException If the data was invalid
-   */
+    /**
+     * Updates the generation data.
+     *
+     * @param Database $database The database instance
+     *
+     * @throws DataException If the data was invalid
+     * @throws Throwable
+     */
   public static function update() {
     $rawData = @file_get_contents(
       sprintf(
@@ -92,11 +93,7 @@ class Generation {
       $data[$time][self::getColumn($item)] = self::getGeneration($item);
     }
 
-    $rows_written = DatabaseStorage::updateGeneration( $data );
-    DatabaseStorage::deleteOldGeneratin();
-    DatabaseStorage::aggregateGeneration();
-
-    return $rows_written;
+      return DatabaseStorage::updateGeneration( $data );
   }
 
   /**
