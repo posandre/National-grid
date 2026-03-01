@@ -599,4 +599,80 @@ class DatabaseStorage {
 
         return true;
     }
+
+    public static function getLatestFiveMinuteGeneration() {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'national_grid_past_five_minutes';
+        $sql = 'SELECT * FROM `' . esc_sql( $table_name ) . '` ORDER BY `time` DESC LIMIT 1';
+        $row = $wpdb->get_row( $sql, ARRAY_A );
+
+        if ( ! is_array( $row ) ) {
+            return array();
+        }
+
+        return $row;
+    }
+
+    public static function getRecentHalfHours( $limit = 1 ) {
+        global $wpdb;
+
+        $limit = max( 1, min( 1000, (int) $limit ) );
+        $table_name = $wpdb->prefix . 'national_grid_past_half_hours';
+        $sql = $wpdb->prepare(
+            'SELECT * FROM `' . esc_sql( $table_name ) . '` ORDER BY `time` DESC LIMIT %d',
+            $limit
+        );
+
+        $rows = $wpdb->get_results( $sql, ARRAY_A );
+        if ( ! is_array( $rows ) ) {
+            return array();
+        }
+
+        return array_reverse( $rows );
+    }
+
+    public static function getFrontendChartData( $limit = 1 ) {
+        $rows = self::getRecentHalfHours( $limit );
+        $latest_five_minutes = self::getLatestFiveMinuteGeneration();
+
+        if ( empty( $rows ) ) {
+            return array(
+                'labels' => array(),
+                'series' => array(),
+                'latest' => array(),
+                'latest_five_minutes' => $latest_five_minutes,
+            );
+        }
+
+        $columns = array_keys( $rows[0] );
+        $columns = array_values(
+            array_filter(
+                $columns,
+                static function ( $column ) {
+                    return 'time' !== $column;
+                }
+            )
+        );
+
+        $labels = array();
+        $series = array();
+        foreach ( $columns as $column ) {
+            $series[ $column ] = array();
+        }
+
+        foreach ( $rows as $row ) {
+            $labels[] = isset( $row['time'] ) ? (string) $row['time'] : '';
+            foreach ( $columns as $column ) {
+                $series[ $column ][] = isset( $row[ $column ] ) ? (float) $row[ $column ] : 0.0;
+            }
+        }
+
+        return array(
+            'labels' => $labels,
+            'series' => $series,
+            'latest' => end( $rows ),
+            'latest_five_minutes' => $latest_five_minutes,
+        );
+    }
 }

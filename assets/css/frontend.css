@@ -1,0 +1,40 @@
+.national-grid-frontend {
+  border: 1px solid #d6dee5;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f8fbfd 0%, #ffffff 100%);
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.national-grid-frontend-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+  color: #102a43;
+}
+
+.national-grid-frontend-description {
+  margin: 8px 0 16px;
+  color: #334e68;
+}
+
+.national-grid-frontend-chart-wrap {
+  position: relative;
+  min-height: 320px;
+}
+
+.national-grid-frontend-chart {
+  display: block;
+  width: 100%;
+  height: 320px;
+}
+
+.national-grid-frontend-status {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #486581;
+}
+
+.national-grid-frontend-status.is-error {
+  color: #b42318;
+}

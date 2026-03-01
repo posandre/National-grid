@@ -28,7 +28,7 @@ require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Generation.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Demand.php';
 
 require_once NATIONAL_GRID_PLUGIN_DIR . 'includes/class-national-grid-admin.php';
-require_once NATIONAL_GRID_PLUGIN_DIR . 'includes/class-national-grid-shortcodes.php';
+require_once NATIONAL_GRID_PLUGIN_DIR . 'includes/class-national-grid-frontend.php';
 
 function national_grid_create_tables() {
     global $wpdb;
@@ -135,6 +135,6 @@ register_activation_hook( __FILE__, 'national_grid_activate' );
 
 function national_grid_bootstrap() {
     National_Grid_Admin::init();
-    National_Grid_Shortcodes::init();
+    National_Grid_Frontend::init();
 }
 add_action( 'plugins_loaded', 'national_grid_bootstrap' );
