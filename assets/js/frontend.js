@@ -304,8 +304,94 @@
     if (!statusNode) {
       return;
     }
-    statusNode.textContent = text || "";
+    var hasText = typeof text === "string" && text.trim() !== "";
+    statusNode.textContent = hasText ? text : "";
+    statusNode.classList.toggle("is-hidden", !hasText);
     statusNode.classList.toggle("is-error", !!isError);
+  }
+
+  function parseUtcDateTime(value) {
+    if (typeof value !== "string" || !value) {
+      return null;
+    }
+
+    var normalized = value.replace(" ", "T");
+    var parsed = new Date(normalized + "Z");
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  function getTzParts(date) {
+    var formatter = new Intl.DateTimeFormat("en-GB", {
+      timeZone: config.timezone || "UTC",
+      hour: "2-digit",
+      minute: "2-digit",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour12: false,
+    });
+
+    var parts = formatter.formatToParts(date);
+    var map = {};
+    parts.forEach(function (part) {
+      map[part.type] = part.value;
+    });
+
+    return {
+      hour: map.hour || "--",
+      minute: map.minute || "--",
+      year: map.year || "0000",
+      month: map.month || "00",
+      day: map.day || "00",
+    };
+  }
+
+  function renderLiveHeading(widget, pointTime) {
+    var headingNode = widget.querySelector(".national-grid-frontend-live-heading");
+    if (!headingNode) {
+      return;
+    }
+
+    var tzLabel = config.timezoneLabel || "UTC";
+    var date = parseUtcDateTime(pointTime);
+    if (!date) {
+      headingNode.textContent =
+        (config.liveHeadingPrefix || "National Grid:") +
+        " --:-- " +
+        (config.todayLabel || "Today") +
+        " (" +
+        tzLabel +
+        ")" +
+        (config.liveHeadingSuffix || " - Generation Mix and Type.");
+      return;
+    }
+
+    var pointParts = getTzParts(date);
+    var nowParts = getTzParts(new Date());
+    var isToday =
+      pointParts.year === nowParts.year &&
+      pointParts.month === nowParts.month &&
+      pointParts.day === nowParts.day;
+    var dayLabel = isToday
+      ? config.todayLabel || "Today"
+      : pointParts.year + "-" + pointParts.month + "-" + pointParts.day;
+
+    headingNode.textContent =
+      (config.liveHeadingPrefix || "National Grid:") +
+      " " +
+      pointParts.hour +
+      ":" +
+      pointParts.minute +
+      " " +
+      dayLabel +
+      " (" +
+      tzLabel +
+      ")" +
+      (config.liveHeadingSuffix || " - Generation Mix and Type.");
   }
 
   function createPieChart(widget, chartData) {
@@ -498,14 +584,10 @@
           updateBarChart(chartState.barChart, nextData);
         }
 
+        renderLiveHeading(widget, chartState.lastPointTime);
         renderSharedLegend(widget, nextData);
 
-        var pointTime = chartState.lastPointTime ? " | Point: " + chartState.lastPointTime : "";
-        renderStatus(
-          widget,
-          config.updatedAtLabel + (response.data.updatedAt || "") + pointTime,
-          false
-        );
+        renderStatus(widget, "", false);
       })
       .catch(function () {
         renderStatus(widget, config.errorMessage, true);
@@ -534,20 +616,15 @@
     };
 
     renderSharedLegend(widget, chartData);
+    renderLiveHeading(widget, chartState.lastPointTime);
 
     if (chartState.pieChart || chartState.barChart) {
       var initialPie = buildPieData(chartData);
       if (initialPie && initialPie.time) {
         chartState.lastPointTime = initialPie.time;
       }
-      var initialPointTime = chartState.lastPointTime ? " | Point: " + chartState.lastPointTime : "";
-      renderStatus(
-        widget,
-        config.updatedAtLabel +
-          new Date().toISOString().slice(0, 19).replace("T", " ") +
-          initialPointTime,
-        false
-      );
+      renderLiveHeading(widget, chartState.lastPointTime);
+      renderStatus(widget, "", false);
     } else {
       renderStatus(widget, config.noDataMessage, false);
     }

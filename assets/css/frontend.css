@@ -18,6 +18,18 @@
   color: #334e68;
 }
 
+.national-grid-frontend .national-grid-frontend-live-heading {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: #102a43;
+  font-weight: 600;
+  width: 100%;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center !important;
+}
+
 .national-grid-frontend-charts {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -73,6 +85,10 @@
   margin-top: 10px;
   font-size: 13px;
   color: #486581;
+}
+
+.national-grid-frontend-status.is-hidden {
+  display: none;
 }
 
 .national-grid-frontend-status.is-error {

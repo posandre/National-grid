@@ -55,6 +55,7 @@ class National_Grid_Frontend {
                 'description' => $description,
                 'limit' => $limit,
                 'payload_json' => wp_json_encode( $payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ),
+                'live_heading' => self::build_live_heading( $chart_data ),
             )
         );
     }
@@ -102,6 +103,11 @@ class National_Grid_Frontend {
                 'errorMessage' => __( 'Unable to refresh chart data.', 'national-grid' ),
                 'updatedAtLabel' => __( 'Updated (UTC): ', 'national-grid' ),
                 'noDataMessage' => __( 'No data available yet.', 'national-grid' ),
+                'todayLabel' => __( 'Today', 'national-grid' ),
+                'liveHeadingPrefix' => __( 'National Grid:', 'national-grid' ),
+                'liveHeadingSuffix' => __( ' - Generation Mix and Type.', 'national-grid' ),
+                'timezoneLabel' => self::get_timezone_label(),
+                'timezone' => self::get_timezone_for_js(),
             )
         );
     }
@@ -165,6 +171,63 @@ class National_Grid_Frontend {
         extract( $data, EXTR_SKIP );
         include $template_path;
         return ob_get_clean();
+    }
+
+    private static function build_live_heading( array $chart_data ) {
+        $time = '';
+        if ( isset( $chart_data['latest_five_minutes']['time'] ) ) {
+            $time = (string) $chart_data['latest_five_minutes']['time'];
+        }
+
+        if ( '' === $time ) {
+            return sprintf(
+                'National Grid: --:-- %s (%s) - Generation Mix and Type.',
+                __( 'Today', 'national-grid' ),
+                self::get_timezone_label()
+            );
+        }
+
+        try {
+            $utc = new DateTimeImmutable( $time, new DateTimeZone( 'UTC' ) );
+            $site_tz = wp_timezone();
+            $local = $utc->setTimezone( $site_tz );
+            $today = new DateTimeImmutable( 'now', $site_tz );
+            $day_label = $local->format( 'Y-m-d' ) === $today->format( 'Y-m-d' )
+                ? __( 'Today', 'national-grid' )
+                : $local->format( 'Y-m-d' );
+
+            return sprintf(
+                'National Grid: %s %s (%s) - Generation Mix and Type.',
+                $local->format( 'H:i' ),
+                $day_label,
+                self::get_timezone_label()
+            );
+        } catch ( Exception $e ) {
+            return sprintf(
+                'National Grid: --:-- %s (%s) - Generation Mix and Type.',
+                __( 'Today', 'national-grid' ),
+                self::get_timezone_label()
+            );
+        }
+    }
+
+    private static function get_timezone_label() {
+        $label = wp_timezone_string();
+        if ( '' !== $label ) {
+            return $label;
+        }
+
+        $site_tz = wp_timezone();
+        return $site_tz->getName();
+    }
+
+    private static function get_timezone_for_js() {
+        $tz = wp_timezone_string();
+        if ( '' !== $tz ) {
+            return $tz;
+        }
+
+        return 'UTC';
     }
 
     private static function should_enqueue_assets() {
