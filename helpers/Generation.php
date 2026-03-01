@@ -1,53 +1,55 @@
 <?php
 /** Updates generation data. */
 class Generation {
-  public const KEYS = [
-    'coal',
-    'ccgt',
-    'ocgt',
-    'nuclear',
-    'oil',
-    'wind',
-    'hydro',
-    'pumped',
-    'biomass',
-    'battery',
-    'other',
-    'ifa',
-    'moyle',
-    'britned',
-    'ewic',
-    'nemo',
-    'ifa2',
-    'nsl',
-    'eleclink',
-    'viking',
-    'greenlink'
-  ];
+    public const KEYS = [
+        'coal',       // Coal-fired generation (вугільні електростанції)
+        'ccgt',       // Combined Cycle Gas Turbine (газові ТЕС комбінованого циклу)
+        'ocgt',       // Open Cycle Gas Turbine (газові турбіни відкритого циклу)
+        'nuclear',    // Nuclear generation (атомна енергетика)
+        'oil',        // Oil-fired generation (мазут / нафтова генерація)
+        'wind',       // Onshore + Offshore wind generation (вітрова генерація)
+        'hydro',      // Conventional hydro generation (гідроелектростанції)
+        'pumped',     // Pumped storage generation (ГАЕС у режимі генерації)
+        'biomass',    // Biomass generation (біоенергетика)
+        'battery',    // Battery storage discharge (акумуляторні системи у режимі генерації)
+        'other',      // Other generation sources (інші джерела)
 
-  public const COLUMNS = [
-    'COAL'    => 1,
-    'CCGT'    => 2,
-    'OCGT'    => 3,
-    'NUCLEAR' => 4,
-    'OIL'     => 5,
-    'WIND'    => 6,
-    'NPSHYD'  => 7,
-    'PS'      => 8,
-    'BIOMASS' => 9,
-    'BESS'    => 10,
-    'OTHER'   => 11,
-    'INTFR'   => 12,
-    'INTIRL'  => 13,
-    'INTNED'  => 14,
-    'INTEW'   => 15,
-    'INTNEM'  => 16,
-    'INTIFA2' => 17,
-    'INTNSL'  => 18,
-    'INTELEC' => 19,
-    'INTVKL'  => 20,
-    'INTGRNL' => 21
-  ];
+        // Interconnectors (flows між GB та іншими країнами)
+        'ifa',        // IFA1 – Interconnector France (GB ↔ France)
+        'moyle',      // Moyle – GB ↔ Northern Ireland
+        'britned',    // BritNed – GB ↔ Netherlands
+        'ewic',       // East West Interconnector – GB ↔ Ireland
+        'nemo',       // Nemo Link – GB ↔ Belgium
+        'ifa2',       // IFA2 – second GB ↔ France interconnector
+        'nsl',        // North Sea Link – GB ↔ Norway
+        'eleclink',   // ElecLink – GB ↔ France (Channel Tunnel)
+        'viking',     // Viking Link – GB ↔ Denmark
+        'greenlink'   // Greenlink – GB ↔ Ireland
+    ];
+
+    public const COLUMNS = [
+        'COAL'    => 1,
+        'CCGT'    => 2,
+        'OCGT'    => 3,
+        'NUCLEAR' => 4,
+        'OIL'     => 5,
+        'WIND'    => 6,
+        'NPSHYD'  => 7,
+        'PS'      => 8,
+        'BIOMASS' => 9,
+        'BESS'    => 10,
+        'OTHER'   => 11,
+        'INTFR'   => 12,
+        'INTIRL'  => 13,
+        'INTNED'  => 14,
+        'INTEW'   => 15,
+        'INTNEM'  => 16,
+        'INTIFA2' => 17,
+        'INTNSL'  => 18,
+        'INTELEC' => 19,
+        'INTVKL'  => 20,
+        'INTGRNL' => 21
+    ];
 
     /**
      * Updates the generation data.

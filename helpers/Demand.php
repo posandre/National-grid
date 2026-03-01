@@ -2,10 +2,10 @@
 
 /** Updates data from the National Energy System Operator Demand Data Update. */
 class Demand {
-  public const KEYS = [
-    'embedded_wind',
-    'embedded_solar'
-  ];
+    public const KEYS = [
+        'embedded_wind',   // Embedded wind generation – вітрова генерація, підключена до розподільчих мереж (не на рівні transmission)
+        'embedded_solar',  // Embedded solar generation – сонячна генерація у distribution network (дахові та локальні СЕС)
+    ];
 
   /**
    * Updates the demand data.
