@@ -7,6 +7,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DatabaseStorage {
     private const STATUS_SUCCESS = 'success';
     private const STATUS_ERROR = 'error';
+    private const FRONTEND_PIE_MAPPING = array(
+        'Gas' => array( 'ccgt', 'ocgt' ),
+        'Wind' => array( 'wind', 'embedded_wind' ),
+        'Solar' => array( 'embedded_solar' ),
+        'Hydroelectric' => array( 'hydro' ),
+        'Nuclear' => array( 'nuclear' ),
+        'Biomass' => array( 'biomass' ),
+        'Interconnectors' => array( 'ifa', 'moyle', 'britned', 'ewic', 'nemo', 'ifa2', 'nsl', 'eleclink', 'viking', 'greenlink' ),
+        'Storage' => array( 'pumped', 'battery' ),
+    );
 
     private static function getLogsTableName() {
         global $wpdb;
@@ -614,6 +624,52 @@ class DatabaseStorage {
         return $row;
     }
 
+    public static function getLatestHalfHourRow() {
+        $rows = self::getRecentHalfHours( 1 );
+        if ( empty( $rows ) ) {
+            return array();
+        }
+
+        return $rows[0];
+    }
+
+    private static function getNumericFromRow( array $row, $key ) {
+        if ( ! isset( $row[ $key ] ) ) {
+            return 0.0;
+        }
+
+        return (float) $row[ $key ];
+    }
+
+    private static function buildFrontendPieData( array $latest_five_minutes, array $latest_half_hour ) {
+        $pie = array();
+
+        foreach ( self::FRONTEND_PIE_MAPPING as $label => $sources ) {
+            $value = 0.0;
+            foreach ( $sources as $source_key ) {
+                if ( in_array( $source_key, array( 'embedded_wind', 'embedded_solar' ), true ) ) {
+                    $value += self::getNumericFromRow( $latest_half_hour, $source_key );
+                    continue;
+                }
+
+                $source_value = self::getNumericFromRow( $latest_five_minutes, $source_key );
+                if ( 'pumped' === $source_key && $source_value < 0 ) {
+                    $source_value = 0.0;
+                }
+
+                $value += $source_value;
+            }
+
+            if ( 'Interconnectors' === $label && $value < 0 ) {
+                $value = 0.0;
+            }
+
+            $pie[ $label ] = $value;
+        }
+
+        return $pie;
+    }
+
     public static function getRecentHalfHours( $limit = 1 ) {
         global $wpdb;
 
@@ -635,6 +691,8 @@ class DatabaseStorage {
     public static function getFrontendChartData( $limit = 1 ) {
         $rows = self::getRecentHalfHours( $limit );
         $latest_five_minutes = self::getLatestFiveMinuteGeneration();
+        $latest_half_hour = self::getLatestHalfHourRow();
+        $pie = self::buildFrontendPieData( $latest_five_minutes, $latest_half_hour );
 
         if ( empty( $rows ) ) {
             return array(
@@ -642,6 +700,9 @@ class DatabaseStorage {
                 'series' => array(),
                 'latest' => array(),
                 'latest_five_minutes' => $latest_five_minutes,
+                'latest_half_hour' => $latest_half_hour,
+                'pie' => $pie,
+                'pie_mapping' => self::FRONTEND_PIE_MAPPING,
             );
         }
 
@@ -673,6 +734,9 @@ class DatabaseStorage {
             'series' => $series,
             'latest' => end( $rows ),
             'latest_five_minutes' => $latest_five_minutes,
+            'latest_half_hour' => $latest_half_hour,
+            'pie' => $pie,
+            'pie_mapping' => self::FRONTEND_PIE_MAPPING,
         );
     }
 }

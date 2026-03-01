@@ -27,54 +27,155 @@
     "#90be6d",
     "#277da1",
   ];
+  var colorByLabel = {
+    Gas: "#9E8B73",
+    Wind: "#5FC79A",
+    Solar: "#F4C84A",
+    Hydroelectric: "#4F93D1",
+    Nuclear: "#9A6BC7",
+    Biomass: "#7EAF2F",
+    Interconnectors: "#E0953C",
+    Storage: "#556A85",
+  };
+  var piePercentLabelsPlugin = {
+    id: "nationalGridPiePercentLabels",
+    afterDatasetsDraw: function (chart) {
+      var dataset = chart.data && chart.data.datasets ? chart.data.datasets[0] : null;
+      if (!dataset || !Array.isArray(dataset.data) || !dataset.data.length) {
+        return;
+      }
 
-  function toHumanLabel(key) {
-    return String(key || "")
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, function (char) {
-        return char.toUpperCase();
+      var total = dataset.data.reduce(function (sum, value) {
+        var numeric = Number(value);
+        return Number.isFinite(numeric) ? sum + numeric : sum;
+      }, 0);
+      if (total <= 0) {
+        return;
+      }
+
+      var ctx = chart.ctx;
+      var meta = chart.getDatasetMeta(0);
+      ctx.save();
+      ctx.font = "600 12px sans-serif";
+      ctx.fillStyle = "#102a43";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      meta.data.forEach(function (arc, index) {
+        var value = Number(dataset.data[index]);
+        if (!Number.isFinite(value) || value <= 0) {
+          return;
+        }
+
+        var percent = (value / total) * 100;
+        if (percent < 3) {
+          return;
+        }
+
+        var midAngle = (arc.startAngle + arc.endAngle) / 2;
+        var labelRadius = arc.outerRadius * 0.72;
+        var x = arc.x + Math.cos(midAngle) * labelRadius;
+        var y = arc.y + Math.sin(midAngle) * labelRadius;
+        ctx.fillText(percent.toFixed(1) + "%", x, y);
       });
-  }
+
+      ctx.restore();
+    },
+  };
+  var pieCenterTotalPlugin = {
+    id: "nationalGridPieCenterTotal",
+    afterDatasetsDraw: function (chart) {
+      var dataset = chart.data && chart.data.datasets ? chart.data.datasets[0] : null;
+      var meta = chart.getDatasetMeta(0);
+      if (!dataset || !meta || !meta.data || !meta.data.length) {
+        return;
+      }
+
+      var total = getDatasetTotal(dataset);
+      var arc = meta.data[0];
+      if (!arc || typeof arc.x !== "number" || typeof arc.y !== "number") {
+        return;
+      }
+
+      var centerX = arc.x;
+      var centerY = arc.y;
+      var outerRadius = typeof arc.outerRadius === "number" ? arc.outerRadius : 0;
+      if (outerRadius <= 0) {
+        return;
+      }
+
+      var innerCircleRadius = outerRadius * 0.45;
+      var ctx = chart.ctx;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, innerCircleRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+
+      ctx.fillStyle = "#334e68";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "600 11px sans-serif";
+      ctx.fillText("Total Generation", centerX, centerY - 10);
+
+      ctx.fillStyle = "#102a43";
+      ctx.font = "700 14px sans-serif";
+      ctx.fillText(total.toFixed(1) + " GW", centerX, centerY + 10);
+      ctx.restore();
+    },
+  };
 
   function buildPieData(chartData) {
-    if (!chartData || !chartData.latest_five_minutes) {
+    if (!chartData || !chartData.pie || typeof chartData.pie !== "object") {
       return null;
     }
 
-    var row = chartData.latest_five_minutes;
-    var labels = [];
-    var values = [];
-    var colors = [];
-
-    Object.keys(row).forEach(function (key, index) {
-      if (key === "time") {
+    var mappedLabels = [];
+    var mappedValues = [];
+    var mappedColors = [];
+    Object.keys(chartData.pie).forEach(function (label, index) {
+      var rawValue = Number(chartData.pie[label]);
+      if (!Number.isFinite(rawValue)) {
         return;
       }
 
-      var numericValue = Number(row[key]);
-      if (!Number.isFinite(numericValue)) {
-        return;
-      }
-      var value = Math.max(0, numericValue);
-      if (value <= 0) {
+      var safeValue = Math.max(0, rawValue);
+      if (safeValue <= 0) {
         return;
       }
 
-      labels.push(toHumanLabel(key));
-      values.push(value);
-      colors.push(palette[index % palette.length]);
+      mappedLabels.push(String(label));
+      mappedValues.push(safeValue);
+      mappedColors.push(
+        colorByLabel[label] || palette[index % palette.length]
+      );
     });
 
-    if (!labels.length) {
+    if (!mappedLabels.length) {
       return null;
     }
 
     return {
-      labels: labels,
-      values: values,
-      colors: colors,
-      time: typeof row.time === "string" ? row.time : "",
+      labels: mappedLabels,
+      values: mappedValues,
+      colors: mappedColors,
+      time:
+        chartData.latest_five_minutes &&
+        typeof chartData.latest_five_minutes.time === "string"
+          ? chartData.latest_five_minutes.time
+          : "",
     };
+  }
+
+  function getDatasetTotal(dataset) {
+    if (!dataset || !Array.isArray(dataset.data)) {
+      return 0;
+    }
+
+    return dataset.data.reduce(function (sum, value) {
+      var numeric = Number(value);
+      return Number.isFinite(numeric) ? sum + numeric : sum;
+    }, 0);
   }
 
   function renderStatus(widget, text, isError) {
@@ -118,8 +219,29 @@
           legend: {
             position: "bottom",
           },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                var dataset = context.dataset || null;
+                var total = getDatasetTotal(dataset);
+                var rawValue = Number(context.raw);
+                var value = Number.isFinite(rawValue) ? rawValue : 0;
+                var percent = total > 0 ? (value / total) * 100 : 0;
+                var label = context.label || "";
+                return (
+                  label +
+                  ": " +
+                  value.toFixed(1) +
+                  " GW (" +
+                  percent.toFixed(1) +
+                  "%)"
+                );
+              },
+            },
+          },
         },
       },
+      plugins: [piePercentLabelsPlugin, pieCenterTotalPlugin],
     });
   }
 
