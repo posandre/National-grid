@@ -11,6 +11,24 @@
     return;
   }
 
+  var COMPONENT_ORDER = [
+    "Gas",
+    "Wind",
+    "Solar",
+    "Hydroelectric",
+    "Nuclear",
+    "Biomass",
+    "Interconnectors",
+    "Storage",
+  ];
+
+  var BAR_GROUPS = [
+    { label: "Renewable", components: ["Wind", "Solar", "Hydroelectric"] },
+    { label: "Low Carbon", components: ["Biomass", "Interconnectors"] },
+    { label: "Fossil Fuels", components: ["Gas"] },
+    { label: "Other", components: ["Interconnectors", "Storage"] },
+  ];
+
   var palette = [
     "#1b4965",
     "#2a9d8f",
@@ -20,13 +38,8 @@
     "#457b9d",
     "#6d597a",
     "#8ab17d",
-    "#b56576",
-    "#577590",
-    "#f94144",
-    "#43aa8b",
-    "#90be6d",
-    "#277da1",
   ];
+
   var colorByLabel = {
     Gas: "#9E8B73",
     Wind: "#5FC79A",
@@ -37,6 +50,7 @@
     Interconnectors: "#E0953C",
     Storage: "#556A85",
   };
+
   var piePercentLabelsPlugin = {
     id: "nationalGridPiePercentLabels",
     afterDatasetsDraw: function (chart) {
@@ -45,10 +59,7 @@
         return;
       }
 
-      var total = dataset.data.reduce(function (sum, value) {
-        var numeric = Number(value);
-        return Number.isFinite(numeric) ? sum + numeric : sum;
-      }, 0);
+      var total = getDatasetTotal(dataset);
       if (total <= 0) {
         return;
       }
@@ -82,6 +93,7 @@
       ctx.restore();
     },
   };
+
   var pieCenterTotalPlugin = {
     id: "nationalGridPieCenterTotal",
     afterDatasetsDraw: function (chart) {
@@ -120,52 +132,45 @@
 
       ctx.fillStyle = "#102a43";
       ctx.font = "700 14px sans-serif";
-      ctx.fillText(total.toFixed(1) + " GW", centerX, centerY + 10);
+      ctx.fillText(total.toFixed(2) + " GW", centerX, centerY + 10);
       ctx.restore();
     },
   };
 
-  function buildPieData(chartData) {
-    if (!chartData || !chartData.pie || typeof chartData.pie !== "object") {
-      return null;
-    }
-
-    var mappedLabels = [];
-    var mappedValues = [];
-    var mappedColors = [];
-    Object.keys(chartData.pie).forEach(function (label, index) {
-      var rawValue = Number(chartData.pie[label]);
-      if (!Number.isFinite(rawValue)) {
+  var barSegmentLabelsPlugin = {
+    id: "nationalGridBarSegmentLabels",
+    afterDatasetsDraw: function (chart) {
+      if (!chart || chart.config.type !== "bar") {
         return;
       }
 
-      var safeValue = Math.max(0, rawValue);
-      if (safeValue <= 0) {
-        return;
-      }
+      var ctx = chart.ctx;
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#102a43";
+      ctx.font = "600 11px sans-serif";
 
-      mappedLabels.push(String(label));
-      mappedValues.push(safeValue);
-      mappedColors.push(
-        colorByLabel[label] || palette[index % palette.length]
-      );
-    });
+      chart.data.datasets.forEach(function (dataset, datasetIndex) {
+        var meta = chart.getDatasetMeta(datasetIndex);
+        if (!meta || meta.hidden) {
+          return;
+        }
 
-    if (!mappedLabels.length) {
-      return null;
-    }
+        meta.data.forEach(function (bar, index) {
+          var value = Number(dataset.data[index]);
+          if (!Number.isFinite(value) || value <= 0) {
+            return;
+          }
 
-    return {
-      labels: mappedLabels,
-      values: mappedValues,
-      colors: mappedColors,
-      time:
-        chartData.latest_five_minutes &&
-        typeof chartData.latest_five_minutes.time === "string"
-          ? chartData.latest_five_minutes.time
-          : "",
-    };
-  }
+          var barHeight = Math.abs(bar.base - bar.y);
+          ctx.fillText(value.toFixed(2) + " GW", bar.x, bar.y + barHeight / 2);
+        });
+      });
+
+      ctx.restore();
+    },
+  };
 
   function getDatasetTotal(dataset) {
     if (!dataset || !Array.isArray(dataset.data)) {
@@ -178,6 +183,122 @@
     }, 0);
   }
 
+  function getComponentValue(pieMap, label) {
+    var value = pieMap && Object.prototype.hasOwnProperty.call(pieMap, label) ? Number(pieMap[label]) : 0;
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+
+    return Math.max(0, value);
+  }
+
+  function buildPieData(chartData) {
+    if (!chartData || !chartData.pie || typeof chartData.pie !== "object") {
+      return null;
+    }
+
+    var labels = [];
+    var values = [];
+    var colors = [];
+
+    COMPONENT_ORDER.forEach(function (label, index) {
+      var value = getComponentValue(chartData.pie, label);
+      if (value <= 0) {
+        return;
+      }
+
+      labels.push(label);
+      values.push(value);
+      colors.push(colorByLabel[label] || palette[index % palette.length]);
+    });
+
+    if (!labels.length) {
+      return null;
+    }
+
+    return {
+      labels: labels,
+      values: values,
+      colors: colors,
+      time:
+        chartData.latest_five_minutes &&
+        typeof chartData.latest_five_minutes.time === "string"
+          ? chartData.latest_five_minutes.time
+          : "",
+    };
+  }
+
+  function buildBarData(chartData) {
+    if (!chartData || !chartData.pie || typeof chartData.pie !== "object") {
+      return null;
+    }
+
+    var labels = BAR_GROUPS.map(function (group) {
+      return group.label;
+    });
+
+    var usedComponents = [];
+    BAR_GROUPS.forEach(function (group) {
+      group.components.forEach(function (component) {
+        if (usedComponents.indexOf(component) === -1) {
+          usedComponents.push(component);
+        }
+      });
+    });
+
+    var datasets = usedComponents.map(function (component, index) {
+      var values = BAR_GROUPS.map(function (group) {
+        if (group.components.indexOf(component) === -1) {
+          return 0;
+        }
+        return getComponentValue(chartData.pie, component);
+      });
+
+      return {
+        label: component,
+        data: values,
+        backgroundColor: colorByLabel[component] || palette[index % palette.length],
+        borderWidth: 0,
+        stack: "live-generation",
+      };
+    });
+
+    return {
+      labels: labels,
+      datasets: datasets,
+    };
+  }
+
+  function renderSharedLegend(widget, chartData) {
+    var legendNode = widget.querySelector(".national-grid-frontend-legend");
+    if (!legendNode) {
+      return;
+    }
+
+    var pieMap = chartData && chartData.pie ? chartData.pie : {};
+    var html = "";
+
+    COMPONENT_ORDER.forEach(function (label, index) {
+      if (!Object.prototype.hasOwnProperty.call(pieMap, label)) {
+        return;
+      }
+
+      var colorClass = String(label)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      html +=
+        '<span class="national-grid-frontend-legend-item">' +
+        '<span class="national-grid-frontend-legend-swatch national-grid-frontend-legend-swatch-' +
+        colorClass +
+        '"></span>' +
+        label +
+        "</span>";
+    });
+
+    legendNode.innerHTML = html;
+  }
+
   function renderStatus(widget, text, isError) {
     var statusNode = widget.querySelector(".national-grid-frontend-status");
     if (!statusNode) {
@@ -187,15 +308,14 @@
     statusNode.classList.toggle("is-error", !!isError);
   }
 
-  function createChart(widget, payload) {
-    var canvas = widget.querySelector(".national-grid-frontend-chart");
-    if (!canvas || !payload || !payload.chartData) {
+  function createPieChart(widget, chartData) {
+    var canvas = widget.querySelector(".national-grid-frontend-chart-pie");
+    if (!canvas) {
       return null;
     }
 
-    var pieData = buildPieData(payload.chartData);
+    var pieData = buildPieData(chartData);
     if (!pieData) {
-      renderStatus(widget, config.noDataMessage, false);
       return null;
     }
 
@@ -217,7 +337,7 @@
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            position: "bottom",
+            display: false,
           },
           tooltip: {
             callbacks: {
@@ -231,7 +351,7 @@
                 return (
                   label +
                   ": " +
-                  value.toFixed(1) +
+                  value.toFixed(2) +
                   " GW (" +
                   percent.toFixed(1) +
                   "%)"
@@ -245,12 +365,65 @@
     });
   }
 
-  function updateChart(chart, data) {
-    if (!chart || !data) {
-      return;
+  function createBarChart(widget, chartData) {
+    var canvas = widget.querySelector(".national-grid-frontend-chart-bar");
+    if (!canvas) {
+      return null;
     }
 
-    var pieData = buildPieData(data);
+    var barData = buildBarData(chartData);
+    if (!barData) {
+      return null;
+    }
+
+    return new window.Chart(canvas, {
+      type: "bar",
+      data: barData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            stacked: true,
+            grid: {
+              display: false,
+            },
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            display: true,
+            title: {
+              display: true,
+              text: "Live Generation (GW)",
+            },
+          },
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                var value = Number(context.raw);
+                var safeValue = Number.isFinite(value) ? value : 0;
+                return (context.dataset.label || "") + ": " + safeValue.toFixed(2) + " GW";
+              },
+            },
+          },
+        },
+      },
+      plugins: [barSegmentLabelsPlugin],
+    });
+  }
+
+  function updatePieChart(chart, chartData) {
+    if (!chart) {
+      return "";
+    }
+
+    var pieData = buildPieData(chartData);
     if (!pieData) {
       chart.data.labels = [];
       chart.data.datasets = [{ data: [] }];
@@ -268,7 +441,26 @@
       },
     ];
     chart.update();
+
     return pieData.time || "";
+  }
+
+  function updateBarChart(chart, chartData) {
+    if (!chart) {
+      return;
+    }
+
+    var barData = buildBarData(chartData);
+    if (!barData) {
+      chart.data.labels = [];
+      chart.data.datasets = [];
+      chart.update();
+      return;
+    }
+
+    chart.data.labels = barData.labels;
+    chart.data.datasets = barData.datasets;
+    chart.update();
   }
 
   function fetchData(widget, chartState) {
@@ -294,11 +486,19 @@
         }
 
         var nextData = response.data.data || {};
-        if (!chartState.instance) {
-          chartState.instance = createChart(widget, { chartData: nextData });
+        if (!chartState.pieChart) {
+          chartState.pieChart = createPieChart(widget, nextData);
         } else {
-          chartState.lastPointTime = updateChart(chartState.instance, nextData);
+          chartState.lastPointTime = updatePieChart(chartState.pieChart, nextData);
         }
+
+        if (!chartState.barChart) {
+          chartState.barChart = createBarChart(widget, nextData);
+        } else {
+          updateBarChart(chartState.barChart, nextData);
+        }
+
+        renderSharedLegend(widget, nextData);
 
         var pointTime = chartState.lastPointTime ? " | Point: " + chartState.lastPointTime : "";
         renderStatus(
@@ -326,18 +526,30 @@
       return;
     }
 
-    var chartState = { instance: createChart(widget, payload), lastPointTime: "" };
-    if (chartState.instance) {
-      var initialPie = buildPieData(payload.chartData || {});
+    var chartData = payload && payload.chartData ? payload.chartData : {};
+    var chartState = {
+      pieChart: createPieChart(widget, chartData),
+      barChart: createBarChart(widget, chartData),
+      lastPointTime: "",
+    };
+
+    renderSharedLegend(widget, chartData);
+
+    if (chartState.pieChart || chartState.barChart) {
+      var initialPie = buildPieData(chartData);
       if (initialPie && initialPie.time) {
         chartState.lastPointTime = initialPie.time;
       }
       var initialPointTime = chartState.lastPointTime ? " | Point: " + chartState.lastPointTime : "";
       renderStatus(
         widget,
-        config.updatedAtLabel + new Date().toISOString().slice(0, 19).replace("T", " ") + initialPointTime,
+        config.updatedAtLabel +
+          new Date().toISOString().slice(0, 19).replace("T", " ") +
+          initialPointTime,
         false
       );
+    } else {
+      renderStatus(widget, config.noDataMessage, false);
     }
 
     var intervalMinutes = parseInt(config.timeoutMinutes, 10) || 5;
