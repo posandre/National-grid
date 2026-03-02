@@ -22,11 +22,11 @@
     "Gas",
   ];
 
-  var CLEAN_POWER_COMPONENTS = ["Wind", "Solar", "Hydroelectric", "Biomass"];
+  var CLEAN_POWER_COMPONENTS = ["Wind", "Solar", "Hydroelectric", "Biomass", "Nuclear"];
 
   var BAR_GROUPS = [
     { label: "Renewable", components: ["Wind", "Solar", "Hydroelectric"] },
-    { label: "Low Carbon", components: ["Biomass", "Interconnectors"] },
+    { label: "Low Carbon", components: ["Biomass", "Nuclear"] },
     { label: "Fossil Fuels", components: ["Gas"] },
     { label: "Other", components: ["Interconnectors", "Storage"] },
   ];
