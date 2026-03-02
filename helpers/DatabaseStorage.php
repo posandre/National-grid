@@ -822,58 +822,18 @@ class DatabaseStorage {
     /**
      * Builds chart payload for frontend rendering.
      *
-     * @param int $limit Max half-hour points to include.
      * @return array<string, mixed>
      */
-    public static function getFrontendChartData( $limit = 1 ) {
-        $rows = self::getRecentHalfHours( $limit );
+    public static function getFrontendChartData() {
         $latest_five_minutes = self::getLatestFiveMinuteGeneration();
         $latest_half_hour = self::getLatestHalfHourRow();
         $pie = self::buildFrontendPieData( $latest_five_minutes, $latest_half_hour );
 
-        if ( empty( $rows ) ) {
-            return [
-                'labels' => [],
-                'series' => [],
-                'latest' => [],
-                'latest_five_minutes' => $latest_five_minutes,
-                'latest_half_hour' => $latest_half_hour,
-                'pie' => $pie,
-                'pie_mapping' => self::FRONTEND_PIE_MAPPING,
-            ];
-        }
-
-        $columns = array_keys( $rows[0] );
-        $columns = array_values(
-            array_filter(
-                $columns,
-                static function ( $column ) {
-                    return 'time' !== $column;
-                }
-            )
-        );
-
-        $labels = [];
-        $series = [];
-        foreach ( $columns as $column ) {
-            $series[ $column ] = [];
-        }
-
-        foreach ( $rows as $row ) {
-            $labels[] = isset( $row['time'] ) ? (string) $row['time'] : '';
-            foreach ( $columns as $column ) {
-                $series[ $column ][] = isset( $row[ $column ] ) ? (float) $row[ $column ] : 0.0;
-            }
-        }
-
         return [
-            'labels' => $labels,
-            'series' => $series,
-            'latest' => end( $rows ),
+            'latest' => $latest_half_hour,
             'latest_five_minutes' => $latest_five_minutes,
             'latest_half_hour' => $latest_half_hour,
-            'pie' => $pie,
-            'pie_mapping' => self::FRONTEND_PIE_MAPPING,
+            'pie' => $pie
         ];
     }
 }
