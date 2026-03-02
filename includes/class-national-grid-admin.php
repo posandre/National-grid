@@ -17,6 +17,10 @@ class National_Grid_Admin {
     private const CRON_HOOK = 'national_grid_cron_update_data';
     /** Custom cron schedule key based on configured timeout. */
     private const CRON_SCHEDULE = 'national_grid_custom_interval';
+    /** Cron hook name for scheduled plugin log cleanup. */
+    private const LOG_CLEAR_CRON_HOOK = 'national_grid_cron_clear_log';
+    /** Custom cron schedule key for plugin log cleanup. */
+    private const LOG_CLEAR_CRON_SCHEDULE = 'national_grid_log_clear_interval';
 
     /**
      * Registers admin page, settings, actions and cron hooks.
@@ -36,7 +40,9 @@ class National_Grid_Admin {
 
         add_filter( 'cron_schedules', [ __CLASS__, 'add_cron_schedule' ] );
         add_action( 'init', [ __CLASS__, 'maybe_sync_cron_event' ] );
+        add_action( 'init', [ __CLASS__, 'maybe_sync_log_clear_cron_event' ] );
         add_action( self::CRON_HOOK, [ __CLASS__, 'handle_cron_update' ] );
+        add_action( self::LOG_CLEAR_CRON_HOOK, [ __CLASS__, 'handle_cron_clear_log' ] );
     }
 
     /**
@@ -100,6 +106,26 @@ class National_Grid_Admin {
             ]
         );
 
+        register_setting(
+            'national_grid_settings',
+            NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG,
+            [
+                'type' => 'boolean',
+                'sanitize_callback' => [ __CLASS__, 'sanitize_auto_clear_log' ],
+                'default' => 0,
+            ]
+        );
+
+        register_setting(
+            'national_grid_settings',
+            NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS,
+            [
+                'type' => 'integer',
+                'sanitize_callback' => [ __CLASS__, 'sanitize_log_clear_interval_hours' ],
+                'default' => 336,
+            ]
+        );
+
         add_settings_section(
             'national_grid_main',
             __( 'National Grid Settings', 'national-grid' ),
@@ -119,6 +145,22 @@ class National_Grid_Admin {
             NATIONAL_GRID_OPTION_AUTO_UPDATE,
             __( 'Automatic cron update', 'national-grid' ),
             [ __CLASS__, 'render_auto_update_field' ],
+            self::PAGE_SLUG,
+            'national_grid_main'
+        );
+
+        add_settings_field(
+            NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG,
+            __( 'Automatic log cleanup', 'national-grid' ),
+            [ __CLASS__, 'render_auto_clear_log_field' ],
+            self::PAGE_SLUG,
+            'national_grid_main'
+        );
+
+        add_settings_field(
+            NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS,
+            __( 'Log cleanup interval', 'national-grid' ),
+            [ __CLASS__, 'render_log_clear_interval_hours_field' ],
             self::PAGE_SLUG,
             'national_grid_main'
         );
@@ -167,6 +209,32 @@ class National_Grid_Admin {
     }
 
     /**
+     * Normalizes automatic log cleanup toggle to 1 or 0.
+     *
+     * @param mixed $value Raw automatic log cleanup option value.
+     * @return int
+     */
+    public static function sanitize_auto_clear_log( $value ) {
+        return ! empty( $value ) ? 1 : 0;
+    }
+
+    /**
+     * Sanitizes log cleanup interval in hours.
+     *
+     * @param mixed $value Raw interval value.
+     * @return int
+     */
+    public static function sanitize_log_clear_interval_hours( $value ) {
+        $value = absint( $value );
+
+        if ( $value <= 0 ) {
+            $value = 336;
+        }
+
+        return $value;
+    }
+
+    /**
      * Renders timeout input field.
      *
      * @return void
@@ -193,6 +261,39 @@ class National_Grid_Admin {
             esc_attr( NATIONAL_GRID_OPTION_AUTO_UPDATE ),
             checked( 1, $value, false ),
             esc_html__( 'Enable automatic updates by cron', 'national-grid' )
+        );
+    }
+
+    /**
+     * Renders automatic log cleanup checkbox field.
+     *
+     * @return void
+     */
+    public static function render_auto_clear_log_field() {
+        $value = (int) get_option( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG, 0 );
+        printf(
+            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s /> %3$s</label>',
+            esc_attr( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG ),
+            checked( 1, $value, false ),
+            esc_html__( 'Enable automatic plugin log cleanup by cron', 'national-grid' )
+        );
+    }
+
+    /**
+     * Renders log cleanup interval input field.
+     *
+     * @return void
+     */
+    public static function render_log_clear_interval_hours_field() {
+        $value = (int) get_option( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS, 336 );
+        if ( $value <= 0 ) {
+            $value = 336;
+        }
+        printf(
+            '<input type="number" name="%1$s" id="%1$s" value="%2$d" class="small-text" min="1" /> <span>%3$s</span>',
+            esc_attr( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS ),
+            $value,
+            esc_html__( 'hours', 'national-grid' )
         );
     }
 
@@ -237,6 +338,12 @@ class National_Grid_Admin {
             'display' => sprintf( __( 'National Grid every %d minutes', 'national-grid' ), $minutes ),
         ];
 
+        $log_clear_hours = max( 1, (int) get_option( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS, 336 ) );
+        $schedules[ self::LOG_CLEAR_CRON_SCHEDULE ] = [
+            'interval' => $log_clear_hours * HOUR_IN_SECONDS,
+            'display' => sprintf( __( 'National Grid log cleanup every %d hours', 'national-grid' ), $log_clear_hours ),
+        ];
+
         return $schedules;
     }
 
@@ -263,12 +370,55 @@ class National_Grid_Admin {
     }
 
     /**
+     * Keeps scheduled log cleanup cron event in sync with current settings.
+     *
+     * @return void
+     */
+    public static function maybe_sync_log_clear_cron_event() {
+        $enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG, 0 );
+        $timestamp = wp_next_scheduled( self::LOG_CLEAR_CRON_HOOK );
+
+        if ( ! $enabled ) {
+            while ( false !== $timestamp ) {
+                wp_unschedule_event( $timestamp, self::LOG_CLEAR_CRON_HOOK );
+                $timestamp = wp_next_scheduled( self::LOG_CLEAR_CRON_HOOK );
+            }
+            return;
+        }
+
+        if ( false === $timestamp ) {
+            wp_schedule_event( time() + MINUTE_IN_SECONDS, self::LOG_CLEAR_CRON_SCHEDULE, self::LOG_CLEAR_CRON_HOOK );
+        }
+    }
+
+    /**
      * Runs scheduled data update.
      *
      * @return void
      */
     public static function handle_cron_update() {
         self::update_data( 'cron' );
+    }
+
+    /**
+     * Clears plugin logs on scheduled cron run.
+     *
+     * @return void
+     */
+    public static function handle_cron_clear_log() {
+        $result = DatabaseStorage::clearLogs();
+        if ( false === $result ) {
+            DatabaseStorage::logError( 'cron', 'Automatic log cleanup failed.' );
+            return;
+        }
+
+        DatabaseStorage::logSuccess(
+            'cron',
+            'Automatic log cleanup completed.',
+            [
+                'rows_deleted' => (int) $result,
+            ]
+        );
     }
 
     /**
@@ -542,11 +692,17 @@ class National_Grid_Admin {
         }
 
         echo '<table class="widefat striped national-grid-admin-log-table">';
+        echo '<colgroup>';
+        echo '<col class="national-grid-admin-log-col-time" />';
+        echo '<col class="national-grid-admin-log-col-source" />';
+        echo '<col class="national-grid-admin-log-col-status" />';
+        echo '<col class="national-grid-admin-log-col-message" />';
+        echo '</colgroup>';
         echo '<thead><tr>';
-        echo '<th>' . esc_html__( 'Time (UTC)', 'national-grid' ) . '</th>';
-        echo '<th>' . esc_html__( 'Source', 'national-grid' ) . '</th>';
-        echo '<th>' . esc_html__( 'Status', 'national-grid' ) . '</th>';
-        echo '<th>' . esc_html__( 'Message', 'national-grid' ) . '</th>';
+        echo '<th class="national-grid-admin-log-th-time">' . esc_html__( 'Time (UTC)', 'national-grid' ) . '</th>';
+        echo '<th class="national-grid-admin-log-th-source">' . esc_html__( 'Source', 'national-grid' ) . '</th>';
+        echo '<th class="national-grid-admin-log-th-status">' . esc_html__( 'Status', 'national-grid' ) . '</th>';
+        echo '<th class="national-grid-admin-log-th-message">' . esc_html__( 'Message', 'national-grid' ) . '</th>';
         echo '</tr></thead>';
         echo '<tbody>';
 
@@ -555,11 +711,11 @@ class National_Grid_Admin {
             $row_class = 'error' === $status ? 'national-grid-log-row-error' : 'national-grid-log-row-success';
 
             echo '<tr class="' . esc_attr( $row_class ) . '">';
-            echo '<td>' . esc_html( isset( $log['created_at'] ) ? (string) $log['created_at'] : '' ) . '</td>';
-            echo '<td>' . esc_html( isset( $log['source'] ) ? (string) $log['source'] : '' ) . '</td>';
-            echo '<td>' . esc_html( $status ) . '</td>';
+            echo '<td class="national-grid-admin-log-td-time">' . esc_html( isset( $log['created_at'] ) ? (string) $log['created_at'] : '' ) . '</td>';
+            echo '<td class="national-grid-admin-log-td-source">' . esc_html( isset( $log['source'] ) ? (string) $log['source'] : '' ) . '</td>';
+            echo '<td class="national-grid-admin-log-td-status">' . esc_html( $status ) . '</td>';
 
-            echo '<td>';
+            echo '<td class="national-grid-admin-log-td-message">';
             echo esc_html( isset( $log['message'] ) ? (string) $log['message'] : '' );
 
             if ( ! empty( $log['context'] ) ) {

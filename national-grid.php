@@ -26,6 +26,10 @@ define( 'NATIONAL_GRID_OPTION_MODULE_TITLE', 'national_grid_module_title' );
 define( 'NATIONAL_GRID_OPTION_MODULE_DESCRIPTION', 'national_grid_module_description' );
 // Option name for automatic cron updates toggle.
 define( 'NATIONAL_GRID_OPTION_AUTO_UPDATE', 'national_grid_auto_update' );
+// Option name for automatic plugin log cleanup toggle.
+define( 'NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG', 'national_grid_auto_clear_log' );
+// Option name for automatic plugin log cleanup interval (in hours).
+define( 'NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS', 'national_grid_log_clear_interval_hours' );
 
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/DataException.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Time.php';
@@ -144,6 +148,14 @@ function national_grid_activate() {
 
     if ( false === get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, false ) ) {
         add_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 );
+    }
+
+    if ( false === get_option( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG, false ) ) {
+        add_option( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG, 0 );
+    }
+
+    if ( false === get_option( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS, false ) ) {
+        add_option( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS, 336 );
     }
 
     national_grid_create_tables();

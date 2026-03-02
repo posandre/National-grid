@@ -44,6 +44,62 @@
     vertical-align: top;
 }
 
+.national-grid-admin-log-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.national-grid-admin-log-col-time {
+    width: 170px;
+}
+
+.national-grid-admin-log-col-source {
+    width: 140px;
+}
+
+.national-grid-admin-log-col-status {
+    width: 130px;
+}
+
+.national-grid-admin-log-col-message {
+    width: auto;
+}
+
+.national-grid-admin-log-th-time,
+.national-grid-admin-log-td-time {
+    white-space: nowrap;
+}
+
+.national-grid-admin-log-th-source,
+.national-grid-admin-log-td-source,
+.national-grid-admin-log-th-status,
+.national-grid-admin-log-td-status {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.national-grid-admin-log-th-message,
+.national-grid-admin-log-td-message {
+    width: auto;
+}
+
+.national-grid-admin-log-td-message {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.national-grid-admin-log-td-message details {
+    margin-top: 6px;
+}
+
+.national-grid-admin-log-td-message pre {
+    margin: 8px 0 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
 .national-grid-log-row-error {
     background-color: #ffe9e9 !important;
 }
