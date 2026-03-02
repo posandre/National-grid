@@ -753,6 +753,21 @@ class National_Grid_Admin {
     }
 
     /**
+     * Renders plugin information section from a dedicated template.
+     *
+     * @return void
+     */
+    private static function render_info_section() {
+        $template_path = NATIONAL_GRID_PLUGIN_DIR . 'templates/admin-info.php';
+        if ( ! is_readable( $template_path ) ) {
+            echo '<p>' . esc_html__( 'Info template is missing.', 'national-grid' ) . '</p>';
+            return;
+        }
+
+        include $template_path;
+    }
+
+    /**
      * Renders the plugin settings page.
      *
      * @return void
@@ -765,7 +780,7 @@ class National_Grid_Admin {
         $active_tab = isset( $_GET['tab'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             ? sanitize_key( (string) wp_unslash( $_GET['tab'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             : 'settings';
-        if ( ! in_array( $active_tab, [ 'settings', 'update', 'logs' ], true ) ) {
+        if ( ! in_array( $active_tab, [ 'settings', 'update', 'logs', 'info' ], true ) ) {
             $active_tab = 'settings';
         }
 
@@ -790,6 +805,13 @@ class National_Grid_Admin {
             ],
             admin_url( 'options-general.php' )
         );
+        $info_tab_url = add_query_arg(
+            [
+                'page' => self::PAGE_SLUG,
+                'tab' => 'info',
+            ],
+            admin_url( 'options-general.php' )
+        );
 
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__( 'National Grid', 'national-grid' ) . '</h1>';
@@ -797,6 +819,7 @@ class National_Grid_Admin {
         echo '<a href="' . esc_url( $settings_tab_url ) . '" class="nav-tab ' . esc_attr( 'settings' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Options', 'national-grid' ) . '</a>';
         echo '<a href="' . esc_url( $update_tab_url ) . '" class="nav-tab ' . esc_attr( 'update' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Update data', 'national-grid' ) . '</a>';
         echo '<a href="' . esc_url( $logs_tab_url ) . '" class="nav-tab ' . esc_attr( 'logs' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Log', 'national-grid' ) . '</a>';
+        echo '<a href="' . esc_url( $info_tab_url ) . '" class="nav-tab ' . esc_attr( 'info' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Info', 'national-grid' ) . '</a>';
         echo '</nav>';
 
         if ( isset( $_GET['national_grid_log_cleared'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -828,6 +851,10 @@ class National_Grid_Admin {
 
         if ( 'logs' === $active_tab ) {
             self::render_logs_section();
+        }
+
+        if ( 'info' === $active_tab ) {
+            self::render_info_section();
         }
 
         echo '</div>';
