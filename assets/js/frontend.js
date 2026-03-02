@@ -22,6 +22,8 @@
     "Storage",
   ];
 
+  var CLEAN_POWER_COMPONENTS = ["Wind", "Solar", "Hydroelectric", "Biomass"];
+
   var BAR_GROUPS = [
     { label: "Renewable", components: ["Wind", "Solar", "Hydroelectric"] },
     { label: "Low Carbon", components: ["Biomass", "Interconnectors"] },
@@ -394,6 +396,25 @@
       (config.liveHeadingSuffix || " - Generation Mix and Type.");
   }
 
+  function renderCleanPowerHeading(widget, chartData) {
+    var headingNode = widget.querySelector(".national-grid-frontend-clean-power-heading");
+    if (!headingNode) {
+      return;
+    }
+
+    var pieMap = chartData && chartData.pie ? chartData.pie : {};
+    var total = COMPONENT_ORDER.reduce(function (sum, label) {
+      return sum + getComponentValue(pieMap, label);
+    }, 0);
+
+    var cleanTotal = CLEAN_POWER_COMPONENTS.reduce(function (sum, label) {
+      return sum + getComponentValue(pieMap, label);
+    }, 0);
+
+    var percentage = total > 0 ? (cleanTotal / total) * 100 : 0;
+    headingNode.textContent = "Live Percentage Clean Power: " + percentage.toFixed(1) + "%";
+  }
+
   function createPieChart(widget, chartData) {
     var canvas = widget.querySelector(".national-grid-frontend-chart-pie");
     if (!canvas) {
@@ -585,6 +606,7 @@
         }
 
         renderLiveHeading(widget, chartState.lastPointTime);
+        renderCleanPowerHeading(widget, nextData);
         renderSharedLegend(widget, nextData);
 
         renderStatus(widget, "", false);
@@ -617,6 +639,7 @@
 
     renderSharedLegend(widget, chartData);
     renderLiveHeading(widget, chartState.lastPointTime);
+    renderCleanPowerHeading(widget, chartData);
 
     if (chartState.pieChart || chartState.barChart) {
       var initialPie = buildPieData(chartData);

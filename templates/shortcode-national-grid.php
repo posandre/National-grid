@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     <h3 class="national-grid-frontend-title"><?php echo esc_html( (string) $title ); ?></h3>
     <p class="national-grid-frontend-description"><?php echo esc_html( (string) $description ); ?></p>
     <p class="national-grid-frontend-live-heading"><?php echo esc_html( (string) $live_heading ); ?></p>
+    <p class="national-grid-frontend-clean-power-heading"></p>
     <div class="national-grid-frontend-charts">
         <div class="national-grid-frontend-chart-wrap">
             <canvas class="national-grid-frontend-chart national-grid-frontend-chart-pie" aria-label="<?php esc_attr_e( 'National Grid pie chart', 'national-grid' ); ?>" role="img"></canvas>

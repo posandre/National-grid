@@ -30,6 +30,18 @@
   text-align: center !important;
 }
 
+.national-grid-frontend .national-grid-frontend-clean-power-heading {
+  margin: 0 0 14px;
+  font-size: 18px;
+  color: #102a43;
+  font-weight: 700;
+  width: 100%;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center !important;
+}
+
 .national-grid-frontend-charts {
   display: grid;
   grid-template-columns: 1fr 1fr;
