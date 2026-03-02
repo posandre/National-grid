@@ -1,52 +1,64 @@
-.national-grid-frontend {
+.national-grid-frontend,  .national-grid-frontend .page-template-default{
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  border: 1px solid #d6dee5;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #f8fbfd 0%, #ffffff 100%);
-  padding: 16px;
   margin: 16px 0;
   overflow-x: hidden;
+  border: 1px solid #dfdfdf;
 }
 
-.national-grid-frontend-title {
-  margin: 0;
-  font-size: 24px;
+.national-grid-frontend-header {
+  background-color: #1b1571;
+  padding: 20px 15px;
+}
+
+.national-grid-frontend-title, .page-template-default .national-grid-frontend .national-grid-frontend-title{
+  font-size: 2rem;
   line-height: 1.2;
-  color: #102a43;
 }
 
-.national-grid-frontend-description {
-  margin: 8px 0 16px;
-  color: #334e68;
+.national-grid-frontend-description, .page-template-default .national-grid-frontend .national-grid-frontend-description {
+  font-weight: 300;
+  color: #5c5c5c;
+}
+
+.national-grid-frontend-title, .page-template-default .national-grid-frontend .national-grid-frontend-title,
+.national-grid-frontend-description, .page-template-default .national-grid-frontend .national-grid-frontend-description {
+  color: white;
+  margin: 0;
+  padding: 0;
+
+}
+
+.national-grid-frontend-title, .page-template-default .national-grid-frontend .national-grid-frontend-title,
+.national-grid-frontend-description, .page-template-default .national-grid-frontend .national-grid-frontend-description,
+.national-grid-frontend .national-grid-frontend-live-heading, .page-template-default .national-grid-frontend .national-grid-frontend-live-heading,
+.national-grid-frontend .national-grid-frontend-clean-power-heading, .page-template-default .national-grid-frontend .national-grid-frontend-clean-power-heading{
+  text-align: center;
 }
 
 .national-grid-frontend .national-grid-frontend-live-heading {
-  margin: 0 0 14px;
-  font-size: 14px;
-  color: #102a43;
+  font-size: 20px;
+  color: black;
   font-weight: 600;
-  width: 100%;
+  text-decoration: underline;
   display: block;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: center !important;
+  margin-bottom: 0;
 }
 
 .national-grid-frontend .national-grid-frontend-clean-power-heading {
-  margin: 0 0 14px;
   font-size: 18px;
-  color: #102a43;
-  font-weight: 700;
-  width: 100%;
+  color: #5c5c5c;
   display: block;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: center !important;
+  padding: 0;
+}
+
+.national-grid-frontend-wrapper {
+  padding: 30px 15px;
 }
 
 .national-grid-frontend-charts {
+  margin-top: 40px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;

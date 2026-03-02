@@ -525,6 +525,10 @@
             title: {
               display: true,
               text: "Live Generation (GW)",
+              font: {
+                weight: "700",
+              },
+              color: "#000000"
             },
           },
         },
