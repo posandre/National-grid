@@ -39,6 +39,8 @@ class National_Grid_Frontend {
      */
     public static function render_shortcode( $atts = [] ) {
         self::mark_assets_required();
+        // Fallback for template-level do_shortcode() calls after wp_enqueue_scripts.
+        self::enqueue_assets();
         self::$instance_counter++;
 
         $atts = shortcode_atts(
