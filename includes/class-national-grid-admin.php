@@ -555,7 +555,7 @@ class National_Grid_Admin {
             if ( ! empty( $log['context'] ) ) {
                 $context = json_decode( (string) $log['context'], true );
                 if ( is_array( $context ) ) {
-                    echo '<details><summary>' . esc_html__( 'Context', 'national-grid' ) . '</summary><pre>' . esc_html( print_r( $context, true ) ) . '</pre></details>';
+                    echo '<details><summary>' . esc_html__( 'Context', 'national-grid' ) . '</summary><pre>' . esc_html( self::format_log_context_for_display( $context ) ) . '</pre></details>';
                 }
             }
 
@@ -565,6 +565,135 @@ class National_Grid_Admin {
 
         echo '</tbody></table>';
         echo '</div>';
+    }
+
+    /**
+     * Formats structured log context into a readable text block.
+     *
+     * @param array<string, mixed> $context Raw context payload.
+     * @return string
+     */
+    private static function format_log_context_for_display( array $context ): string {
+        $lines = [];
+
+        if ( isset( $context['generation'] ) && is_array( $context['generation'] ) ) {
+            $generation = $context['generation'];
+            $lines[] = sprintf(
+                'Generation update: wrote %d rows, aggregated %d rows, deleted %d old rows.',
+                isset( $generation['rows_written'] ) ? (int) $generation['rows_written'] : 0,
+                isset( $generation['rows_aggregated'] ) ? (int) $generation['rows_aggregated'] : 0,
+                isset( $generation['rows_deleted'] ) ? (int) $generation['rows_deleted'] : 0
+            );
+            unset( $context['generation'] );
+        }
+
+        if ( isset( $context['demand'] ) && is_array( $context['demand'] ) ) {
+            $demand = $context['demand'];
+            $lines[] = sprintf(
+                'Demand update: read %d rows, accepted %d rows, skipped %d rows, wrote %d rows, deleted %d old rows. Success: %s.',
+                isset( $demand['read'] ) ? (int) $demand['read'] : 0,
+                isset( $demand['valid'] ) ? (int) $demand['valid'] : 0,
+                isset( $demand['skipped'] ) ? (int) $demand['skipped'] : 0,
+                isset( $demand['rows_written'] ) ? (int) $demand['rows_written'] : 0,
+                isset( $demand['rows_deleted'] ) ? (int) $demand['rows_deleted'] : 0,
+                ! empty( $demand['success'] ) ? 'yes' : 'no'
+            );
+            unset( $context['demand'] );
+        }
+
+        if ( isset( $context['generation_result'] ) ) {
+            $lines[] = 'Generation result payload: ' . self::describe_context_value( $context['generation_result'] );
+            unset( $context['generation_result'] );
+        }
+
+        if ( isset( $context['demand_result'] ) ) {
+            $lines[] = 'Demand result payload: ' . self::describe_context_value( $context['demand_result'] );
+            unset( $context['demand_result'] );
+        }
+
+        if ( isset( $context['exception'] ) ) {
+            $lines[] = 'Exception type: ' . self::describe_context_value( $context['exception'] ) . '.';
+            unset( $context['exception'] );
+        }
+
+        if ( isset( $context['message'] ) ) {
+            $lines[] = 'Exception message: ' . self::describe_context_value( $context['message'] ) . '.';
+            unset( $context['message'] );
+        }
+
+        if ( isset( $context['previous'] ) && '' !== trim( (string) $context['previous'] ) ) {
+            $lines[] = 'Previous exception message: ' . trim( (string) $context['previous'] ) . '.';
+            unset( $context['previous'] );
+        }
+
+        foreach ( $context as $key => $value ) {
+            $label = ucwords( str_replace( '_', ' ', (string) $key ) );
+            $lines[] = $label . ': ' . self::describe_context_value( $value ) . '.';
+        }
+
+        if ( empty( $lines ) ) {
+            return __( 'No additional context available.', 'national-grid' );
+        }
+
+        return implode( "\n", $lines );
+    }
+
+    /**
+     * Converts context values into concise human-readable text.
+     *
+     * @param mixed $value Context value.
+     * @return string
+     */
+    private static function describe_context_value( $value ): string {
+        if ( is_bool( $value ) ) {
+            return $value ? 'yes' : 'no';
+        }
+
+        if ( is_int( $value ) || is_float( $value ) ) {
+            return (string) $value;
+        }
+
+        if ( is_string( $value ) ) {
+            return trim( $value );
+        }
+
+        if ( null === $value ) {
+            return 'null';
+        }
+
+        if ( is_array( $value ) ) {
+            if ( empty( $value ) ) {
+                return 'empty array';
+            }
+
+            $is_list = array_values( $value ) === $value;
+            if ( $is_list ) {
+                $preview = array_slice(
+                    array_map(
+                        static function ( $item ) {
+                            return is_scalar( $item ) || null === $item
+                                ? (string) ( null === $item ? 'null' : $item )
+                                : '[complex value]';
+                        },
+                        $value
+                    ),
+                    0,
+                    5
+                );
+                $suffix = count( $value ) > 5 ? ', ...' : '';
+                return 'list (' . count( $value ) . ' items): ' . implode( ', ', $preview ) . $suffix;
+            }
+
+            $keys = array_slice( array_keys( $value ), 0, 8 );
+            $suffix = count( $value ) > 8 ? ', ...' : '';
+            return 'associative array with keys: ' . implode( ', ', array_map( 'strval', $keys ) ) . $suffix;
+        }
+
+        if ( is_object( $value ) ) {
+            return 'object of class ' . get_class( $value );
+        }
+
+        return 'unrecognized value';
     }
 
     /**
