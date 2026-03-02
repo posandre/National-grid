@@ -10,16 +10,36 @@ class DatabaseStorage {
     /** Log status value for failed events. */
     private const STATUS_ERROR = 'error';
     /** Maps frontend pie labels to storage columns used for aggregation. */
-    private const FRONTEND_PIE_MAPPING = array(
-        'Gas' => array( 'ccgt', 'ocgt' ),
-        'Wind' => array( 'wind', 'embedded_wind' ),
-        'Solar' => array( 'embedded_solar' ),
-        'Hydroelectric' => array( 'hydro' ),
-        'Nuclear' => array( 'nuclear' ),
-        'Biomass' => array( 'biomass' ),
-        'Interconnectors' => array( 'ifa', 'moyle', 'britned', 'ewic', 'nemo', 'ifa2', 'nsl', 'eleclink', 'viking', 'greenlink' ),
-        'Storage' => array( 'pumped', 'battery' ),
-    );
+    private const FRONTEND_PIE_MAPPING = [
+        'Gas' => [
+            'ccgt',
+            'ocgt'
+        ],
+        'Wind' => [
+            'wind',
+            'embedded_wind'
+        ],
+        'Solar' => [ 'embedded_solar' ],
+        'Hydroelectric' => [ 'hydro' ],
+        'Nuclear' => [ 'nuclear' ],
+        'Biomass' => [ 'biomass' ],
+        'Interconnectors' => [
+            'ifa',
+            'moyle',
+            'britned',
+            'ewic',
+            'nemo',
+            'ifa2',
+            'nsl',
+            'eleclink',
+            'viking',
+            'greenlink'
+        ],
+        'Storage' => [
+            'pumped',
+            'battery'
+        ],
+    ];
 
     /**
      * Returns fully-qualified logs table name.
@@ -40,7 +60,7 @@ class DatabaseStorage {
      * @param array<string, mixed> $context Additional context payload.
      * @return bool
      */
-    public static function logSuccess( $source, $message, array $context = array() ) {
+    public static function logSuccess( $source, $message, array $context = [] ) {
         return self::logEvent( $source, self::STATUS_SUCCESS, $message, $context );
     }
 
@@ -52,7 +72,7 @@ class DatabaseStorage {
      * @param array<string, mixed> $context Additional context payload.
      * @return bool
      */
-    public static function logError( $source, $message, array $context = array() ) {
+    public static function logError( $source, $message, array $context = [] ) {
         return self::logEvent( $source, self::STATUS_ERROR, $message, $context );
     }
 
@@ -65,20 +85,20 @@ class DatabaseStorage {
      * @param array<string, mixed> $context Additional context payload.
      * @return bool
      */
-    public static function logEvent( $source, $status, $message, array $context = array() ) {
+    public static function logEvent( $source, $status, $message, array $context = [] ) {
         global $wpdb;
 
         $table_name = self::getLogsTableName();
         $result = $wpdb->insert(
             $table_name,
-            array(
+            [
                 'created_at' => gmdate( 'Y-m-d H:i:s' ),
                 'source' => sanitize_key( (string) $source ),
                 'status' => sanitize_key( (string) $status ),
                 'message' => sanitize_text_field( (string) $message ),
                 'context' => wp_json_encode( $context ),
-            ),
-            array( '%s', '%s', '%s', '%s', '%s' )
+            ],
+            [ '%s', '%s', '%s', '%s', '%s' ]
         );
 
         return false !== $result;
@@ -102,7 +122,7 @@ class DatabaseStorage {
 
         $rows = $wpdb->get_results( $sql, ARRAY_A );
 
-        return is_array( $rows ) ? $rows : array();
+        return is_array( $rows ) ? $rows : [];
     }
 
     /**
@@ -125,10 +145,10 @@ class DatabaseStorage {
     public static function canUseGenerationTransactions(): bool {
         global $wpdb;
 
-        $tables = array(
+        $tables = [
             $wpdb->prefix . 'national_grid_past_five_minutes',
             $wpdb->prefix . 'national_grid_past_half_hours',
-        );
+        ];
 
         foreach ( $tables as $table_name ) {
             $sql = $wpdb->prepare( 'SHOW TABLE STATUS LIKE %s', $table_name );
@@ -216,7 +236,7 @@ class DatabaseStorage {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'national_grid_past_five_minutes';
-        $column_to_key_map = array();
+        $column_to_key_map = [];
 
         foreach ( Generation::COLUMNS as $column_index ) {
             if ( isset( Generation::KEYS[ $column_index - 1 ] ) ) {
@@ -228,13 +248,13 @@ class DatabaseStorage {
             return 0;
         }
 
-        $columns = array_merge( array( 'time' ), array_values( $column_to_key_map ) );
+        $columns = array_merge( [ 'time' ], array_values( $column_to_key_map ) );
         $column_sql = '`' . implode( '`, `', array_map( 'esc_sql', $columns ) ) . '`';
         $table_sql = '`' . esc_sql( $table_name ) . '`';
 
-        $single_row_placeholders = '(' . implode( ', ', array_merge( array( '%s' ), array_fill( 0, count( $columns ) - 1, '%f' ) ) ) . ')';
-        $rows_placeholders = array();
-        $query_values = array();
+        $single_row_placeholders = '(' . implode( ', ', array_merge( [ '%s' ], array_fill( 0, count( $columns ) - 1, '%f' ) ) ) . ')';
+        $rows_placeholders = [];
+        $query_values = [];
         $valid_rows_count = 0;
 
         foreach ( $data as $row ) {
@@ -406,9 +426,9 @@ class DatabaseStorage {
 
         $table_name = $wpdb->prefix . 'national_grid_' . $table;
         $column_sql = '`time`, `' . implode( '`, `', $safe_columns ) . '`';
-        $single_row_placeholders = '(' . implode( ', ', array_merge( array( '%s' ), array_fill( 0, count( $safe_columns ), '%f' ) ) ) . ')';
-        $rows_placeholders = array();
-        $query_values = array();
+        $single_row_placeholders = '(' . implode( ', ', array_merge( [ '%s' ], array_fill( 0, count( $safe_columns ), '%f' ) ) ) . ')';
+        $rows_placeholders = [];
+        $query_values = [];
 
         foreach ( $data as $datum ) {
             if ( ! is_array( $datum ) || count( $datum ) < count( $safe_columns ) + 1 || ! isset( $datum[0] ) ) {
@@ -554,7 +574,7 @@ class DatabaseStorage {
 
         $safe_table = preg_replace( '/[^a-z0-9_]/i', '', $table );
         if ( '' === $safe_table ) {
-            return array( 'time' => '0000-00-00 00:00:00' );
+            return [ 'time' => '0000-00-00 00:00:00' ];
         }
 
         $table_name = ( 0 === strpos( $safe_table, $wpdb->prefix ) ) ? $safe_table : $wpdb->prefix . 'national_grid_' . $safe_table;
@@ -658,8 +678,8 @@ class DatabaseStorage {
             return true;
         }
 
-        $set_clauses = array();
-        $set_values = array();
+        $set_clauses = [];
+        $set_values = [];
         foreach ( Demand::KEYS as $column ) {
             $safe_column = preg_replace( '/[^a-z0-9_]/i', '', (string) $column );
             if ( '' === $safe_column ) {
@@ -704,7 +724,7 @@ class DatabaseStorage {
         $row = $wpdb->get_row( $sql, ARRAY_A );
 
         if ( ! is_array( $row ) ) {
-            return array();
+            return [];
         }
 
         return $row;
@@ -718,7 +738,7 @@ class DatabaseStorage {
     public static function getLatestHalfHourRow() {
         $rows = self::getRecentHalfHours( 1 );
         if ( empty( $rows ) ) {
-            return array();
+            return [];
         }
 
         return $rows[0];
@@ -747,12 +767,12 @@ class DatabaseStorage {
      * @return array<string, float>
      */
     private static function buildFrontendPieData( array $latest_five_minutes, array $latest_half_hour ) {
-        $pie = array();
+        $pie = [];
 
         foreach ( self::FRONTEND_PIE_MAPPING as $label => $sources ) {
             $value = 0.0;
             foreach ( $sources as $source_key ) {
-                if ( in_array( $source_key, array( 'embedded_wind', 'embedded_solar' ), true ) ) {
+                if ( in_array( $source_key, [ 'embedded_wind', 'embedded_solar' ], true ) ) {
                     $value += self::getNumericFromRow( $latest_half_hour, $source_key );
                     continue;
                 }
@@ -793,7 +813,7 @@ class DatabaseStorage {
 
         $rows = $wpdb->get_results( $sql, ARRAY_A );
         if ( ! is_array( $rows ) ) {
-            return array();
+            return [];
         }
 
         return array_reverse( $rows );
@@ -812,15 +832,15 @@ class DatabaseStorage {
         $pie = self::buildFrontendPieData( $latest_five_minutes, $latest_half_hour );
 
         if ( empty( $rows ) ) {
-            return array(
-                'labels' => array(),
-                'series' => array(),
-                'latest' => array(),
+            return [
+                'labels' => [],
+                'series' => [],
+                'latest' => [],
                 'latest_five_minutes' => $latest_five_minutes,
                 'latest_half_hour' => $latest_half_hour,
                 'pie' => $pie,
                 'pie_mapping' => self::FRONTEND_PIE_MAPPING,
-            );
+            ];
         }
 
         $columns = array_keys( $rows[0] );
@@ -833,10 +853,10 @@ class DatabaseStorage {
             )
         );
 
-        $labels = array();
-        $series = array();
+        $labels = [];
+        $series = [];
         foreach ( $columns as $column ) {
-            $series[ $column ] = array();
+            $series[ $column ] = [];
         }
 
         foreach ( $rows as $row ) {
@@ -846,7 +866,7 @@ class DatabaseStorage {
             }
         }
 
-        return array(
+        return [
             'labels' => $labels,
             'series' => $series,
             'latest' => end( $rows ),
@@ -854,6 +874,6 @@ class DatabaseStorage {
             'latest_half_hour' => $latest_half_hour,
             'pie' => $pie,
             'pie_mapping' => self::FRONTEND_PIE_MAPPING,
-        );
+        ];
     }
 }

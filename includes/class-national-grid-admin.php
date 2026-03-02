@@ -24,19 +24,19 @@ class National_Grid_Admin {
      * @return void
      */
     public static function init() {
-        add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
-        add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
-        add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+        add_action( 'admin_menu', [ __CLASS__, 'register_menu' ] );
+        add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
+        add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
 
-        add_action( 'admin_post_' . self::UPDATE_ACTION, array( __CLASS__, 'handle_update_data' ) );
-        add_action( 'wp_ajax_' . self::UPDATE_ACTION, array( __CLASS__, 'handle_update_data_ajax' ) );
-        add_action( 'wp_ajax_' . self::FETCH_LOG_ACTION, array( __CLASS__, 'handle_fetch_log_section_ajax' ) );
+        add_action( 'admin_post_' . self::UPDATE_ACTION, [ __CLASS__, 'handle_update_data' ] );
+        add_action( 'wp_ajax_' . self::UPDATE_ACTION, [ __CLASS__, 'handle_update_data_ajax' ] );
+        add_action( 'wp_ajax_' . self::FETCH_LOG_ACTION, [ __CLASS__, 'handle_fetch_log_section_ajax' ] );
 
-        add_action( 'admin_post_' . self::CLEAR_LOG_ACTION, array( __CLASS__, 'handle_clear_log' ) );
+        add_action( 'admin_post_' . self::CLEAR_LOG_ACTION, [ __CLASS__, 'handle_clear_log' ] );
 
-        add_filter( 'cron_schedules', array( __CLASS__, 'add_cron_schedule' ) );
-        add_action( 'init', array( __CLASS__, 'maybe_sync_cron_event' ) );
-        add_action( self::CRON_HOOK, array( __CLASS__, 'handle_cron_update' ) );
+        add_filter( 'cron_schedules', [ __CLASS__, 'add_cron_schedule' ] );
+        add_action( 'init', [ __CLASS__, 'maybe_sync_cron_event' ] );
+        add_action( self::CRON_HOOK, [ __CLASS__, 'handle_cron_update' ] );
     }
 
     /**
@@ -50,7 +50,7 @@ class National_Grid_Admin {
             __( 'National Grid', 'national-grid' ),
             'manage_options',
             self::PAGE_SLUG,
-            array( __CLASS__, 'render_page' )
+            [ __CLASS__, 'render_page' ]
         );
     }
 
@@ -63,41 +63,41 @@ class National_Grid_Admin {
         register_setting(
             'national_grid_settings',
             NATIONAL_GRID_OPTION_TIMEOUT,
-            array(
+            [
                 'type' => 'integer',
-                'sanitize_callback' => array( __CLASS__, 'sanitize_timeout' ),
+                'sanitize_callback' => [ __CLASS__, 'sanitize_timeout' ],
                 'default' => 5,
-            )
+            ]
         );
 
         register_setting(
             'national_grid_settings',
             NATIONAL_GRID_OPTION_MODULE_TITLE,
-            array(
+            [
                 'type' => 'string',
                 'sanitize_callback' => 'sanitize_text_field',
                 'default' => '',
-            )
+            ]
         );
 
         register_setting(
             'national_grid_settings',
             NATIONAL_GRID_OPTION_MODULE_DESCRIPTION,
-            array(
+            [
                 'type' => 'string',
                 'sanitize_callback' => 'sanitize_textarea_field',
                 'default' => '',
-            )
+            ]
         );
 
         register_setting(
             'national_grid_settings',
             NATIONAL_GRID_OPTION_AUTO_UPDATE,
-            array(
+            [
                 'type' => 'boolean',
-                'sanitize_callback' => array( __CLASS__, 'sanitize_auto_update' ),
+                'sanitize_callback' => [ __CLASS__, 'sanitize_auto_update' ],
                 'default' => 0,
-            )
+            ]
         );
 
         add_settings_section(
@@ -110,7 +110,7 @@ class National_Grid_Admin {
         add_settings_field(
             NATIONAL_GRID_OPTION_TIMEOUT,
             __( 'National grid timeout', 'national-grid' ),
-            array( __CLASS__, 'render_timeout_field' ),
+            [ __CLASS__, 'render_timeout_field' ],
             self::PAGE_SLUG,
             'national_grid_main'
         );
@@ -118,7 +118,7 @@ class National_Grid_Admin {
         add_settings_field(
             NATIONAL_GRID_OPTION_AUTO_UPDATE,
             __( 'Automatic cron update', 'national-grid' ),
-            array( __CLASS__, 'render_auto_update_field' ),
+            [ __CLASS__, 'render_auto_update_field' ],
             self::PAGE_SLUG,
             'national_grid_main'
         );
@@ -126,7 +126,7 @@ class National_Grid_Admin {
         add_settings_field(
             NATIONAL_GRID_OPTION_MODULE_TITLE,
             __( 'Module title', 'national-grid' ),
-            array( __CLASS__, 'render_module_title_field' ),
+            [ __CLASS__, 'render_module_title_field' ],
             self::PAGE_SLUG,
             'national_grid_main'
         );
@@ -134,7 +134,7 @@ class National_Grid_Admin {
         add_settings_field(
             NATIONAL_GRID_OPTION_MODULE_DESCRIPTION,
             __( 'Module description', 'national-grid' ),
-            array( __CLASS__, 'render_module_description_field' ),
+            [ __CLASS__, 'render_module_description_field' ],
             self::PAGE_SLUG,
             'national_grid_main'
         );
@@ -232,10 +232,10 @@ class National_Grid_Admin {
      */
     public static function add_cron_schedule( $schedules ) {
         $minutes = max( 1, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) );
-        $schedules[ self::CRON_SCHEDULE ] = array(
+        $schedules[ self::CRON_SCHEDULE ] = [
             'interval' => $minutes * MINUTE_IN_SECONDS,
             'display' => sprintf( __( 'National Grid every %d minutes', 'national-grid' ), $minutes ),
-        );
+        ];
 
         return $schedules;
     }
@@ -278,7 +278,7 @@ class National_Grid_Admin {
      * @return array<string, mixed>
      */
     public static function update_data( $source = 'manual' ) {
-        $source = in_array( $source, array( 'manual', 'cron' ), true ) ? $source : 'manual';
+        $source = in_array( $source, [ 'manual', 'cron' ], true ) ? $source : 'manual';
 
         try {
             $generation_update_result = Generation::update();
@@ -286,11 +286,11 @@ class National_Grid_Admin {
                 ! is_array( $generation_update_result )
                 || ! isset( $generation_update_result['rows_written'], $generation_update_result['rows_aggregated'], $generation_update_result['rows_deleted'] )
             ) {
-                DatabaseStorage::logError( $source, 'Generation update failed.', array( 'generation_result' => $generation_update_result ) );
-                return array(
+                DatabaseStorage::logError( $source, 'Generation update failed.', [ 'generation_result' => $generation_update_result ] );
+                return [
                     'success' => false,
                     'message' => __( 'Update failed. Check log for details.', 'national-grid' ),
-                );
+                ];
             }
 
             $demand_update_result = Demand::update();
@@ -299,54 +299,54 @@ class National_Grid_Admin {
                 || empty( $demand_update_result['success'] )
                 || ! isset( $demand_update_result['rows_written'], $demand_update_result['rows_deleted'], $demand_update_result['read'], $demand_update_result['valid'], $demand_update_result['skipped'] )
             ) {
-                DatabaseStorage::logError( $source, 'Demand update failed.', array( 'demand_result' => $demand_update_result ) );
-                return array(
+                DatabaseStorage::logError( $source, 'Demand update failed.', [ 'demand_result' => $demand_update_result ] );
+                return [
                     'success' => false,
                     'message' => __( 'Update failed. Check log for details.', 'national-grid' ),
-                );
+                ];
             }
 
             DatabaseStorage::logSuccess(
                 $source,
                 'Data updated successfully.',
-                array(
+                [
                     'generation' => $generation_update_result,
                     'demand' => $demand_update_result,
-                )
+                ]
             );
 
-            return array(
+            return [
                 'success' => true,
                 'message' => __( 'Update completed. Check log for details.', 'national-grid' ),
-            );
+            ];
         } catch ( DataException $e ) {
             DatabaseStorage::logError(
                 $source,
                 $e->getMessage(),
-                array(
+                [
                     'exception' => get_class( $e ),
                     'previous' => $e->getPrevious() ? $e->getPrevious()->getMessage() : '',
-                )
+                ]
             );
 
-            return array(
+            return [
                 'success' => false,
                 'message' => __( 'Update failed. Check log for details.', 'national-grid' ),
-            );
+            ];
         } catch ( Throwable $e ) {
             DatabaseStorage::logError(
                 $source,
                 'Unexpected update error.',
-                array(
+                [
                     'exception' => get_class( $e ),
                     'message' => $e->getMessage(),
-                )
+                ]
             );
 
-            return array(
+            return [
                 'success' => false,
                 'message' => __( 'Update failed. Check log for details.', 'national-grid' ),
-            );
+            ];
         }
     }
 
@@ -381,18 +381,18 @@ class National_Grid_Admin {
     public static function handle_update_data_ajax() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_send_json_error(
-                array(
+                [
                     'message' => __( 'You do not have permission to do that.', 'national-grid' ),
-                ),
+                ],
                 403
             );
         }
 
         if ( ! check_ajax_referer( self::UPDATE_ACTION, 'nonce', false ) ) {
             wp_send_json_error(
-                array(
+                [
                     'message' => __( 'Nonce mismatch. Please refresh the page and try again.', 'national-grid' ),
-                ),
+                ],
                 403
             );
         }
@@ -402,18 +402,18 @@ class National_Grid_Admin {
 
         if ( ! empty( $updated['success'] ) ) {
             wp_send_json_success(
-                array(
+                [
                     'message' => $updated['message'],
                     'logHtml' => $log_html,
-                )
+                ]
             );
         }
 
         wp_send_json_error(
-            array(
+            [
                 'message' => ! empty( $updated['message'] ) ? $updated['message'] : __( 'Data update failed.', 'national-grid' ),
                 'logHtml' => $log_html,
-            ),
+            ],
             500
         );
     }
@@ -426,18 +426,18 @@ class National_Grid_Admin {
     public static function handle_fetch_log_section_ajax() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_send_json_error(
-                array(
+                [
                     'message' => __( 'You do not have permission to do that.', 'national-grid' ),
-                ),
+                ],
                 403
             );
         }
 
         if ( ! check_ajax_referer( self::UPDATE_ACTION, 'nonce', false ) ) {
             wp_send_json_error(
-                array(
+                [
                     'message' => __( 'Nonce mismatch. Please refresh the page and try again.', 'national-grid' ),
-                ),
+                ],
                 403
             );
         }
@@ -447,9 +447,9 @@ class National_Grid_Admin {
         $html = ob_get_clean();
 
         wp_send_json_success(
-            array(
+            [
                 'html' => $html,
-            )
+            ]
         );
     }
 
@@ -485,26 +485,26 @@ class National_Grid_Admin {
         wp_enqueue_style(
             'national-grid-admin',
             NATIONAL_GRID_PLUGIN_URL . 'assets/css/admin.css',
-            array(),
+            [],
             NATIONAL_GRID_VERSION
         );
         wp_enqueue_script(
             'national-grid-admin',
             NATIONAL_GRID_PLUGIN_URL . 'assets/js/admin.js',
-            array( 'jquery' ),
+            [ 'jquery' ],
             NATIONAL_GRID_VERSION,
             true
         );
         wp_localize_script(
             'national-grid-admin',
             'nationalGridAdmin',
-            array(
+            [
                 'ajaxUrl' => admin_url( 'admin-ajax.php' ),
                 'action' => self::UPDATE_ACTION,
                 'fetchLogAction' => self::FETCH_LOG_ACTION,
                 'nonce' => wp_create_nonce( self::UPDATE_ACTION ),
                 'unknownError' => __( 'Unexpected error. Please try again.', 'national-grid' ),
-            )
+            ]
         );
     }
 

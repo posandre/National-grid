@@ -25,10 +25,10 @@ class National_Grid_Frontend {
      * @return void
      */
     public static function init() {
-        add_shortcode( self::SHORTCODE, array( __CLASS__, 'render_shortcode' ) );
-        add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
-        add_action( 'wp_ajax_' . self::AJAX_ACTION, array( __CLASS__, 'handle_frontend_data_ajax' ) );
-        add_action( 'wp_ajax_nopriv_' . self::AJAX_ACTION, array( __CLASS__, 'handle_frontend_data_ajax' ) );
+        add_shortcode( self::SHORTCODE, [ __CLASS__, 'render_shortcode' ] );
+        add_action( 'wp_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
+        add_action( 'wp_ajax_' . self::AJAX_ACTION, [ __CLASS__, 'handle_frontend_data_ajax' ] );
+        add_action( 'wp_ajax_nopriv_' . self::AJAX_ACTION, [ __CLASS__, 'handle_frontend_data_ajax' ] );
     }
 
     /**
@@ -37,16 +37,16 @@ class National_Grid_Frontend {
      * @param array<string, mixed> $atts Shortcode attributes.
      * @return string
      */
-    public static function render_shortcode( $atts = array() ) {
+    public static function render_shortcode( $atts = [] ) {
         self::mark_assets_required();
         self::$instance_counter++;
 
         $atts = shortcode_atts(
-            array(
+            [
                 'title' => '',
                 'description' => '',
                 'limit' => 1,
-            ),
+            ],
             $atts,
             self::SHORTCODE
         );
@@ -57,22 +57,22 @@ class National_Grid_Frontend {
         $chart_data = DatabaseStorage::getFrontendChartData( $limit );
         $instance_id = 'national-grid-frontend-' . self::$instance_counter;
 
-        $payload = array(
+        $payload = [
             'title' => $title,
             'description' => $description,
             'chartData' => $chart_data,
-        );
+        ];
 
         return self::render_template(
             'shortcode-national-grid.php',
-            array(
+            [
                 'instance_id' => $instance_id,
                 'title' => $title,
                 'description' => $description,
                 'limit' => $limit,
                 'payload_json' => wp_json_encode( $payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ),
                 'live_heading' => self::build_live_heading( $chart_data ),
-            )
+            ]
         );
     }
 
@@ -98,14 +98,14 @@ class National_Grid_Frontend {
         wp_enqueue_style(
             'national-grid-frontend',
             NATIONAL_GRID_PLUGIN_URL . 'assets/css/frontend.css',
-            array(),
+            [],
             NATIONAL_GRID_VERSION
         );
 
         wp_enqueue_script(
             'national-grid-chart-js',
             'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
-            array(),
+            [],
             '4.4.1',
             true
         );
@@ -113,7 +113,7 @@ class National_Grid_Frontend {
         wp_enqueue_script(
             'national-grid-frontend',
             NATIONAL_GRID_PLUGIN_URL . 'assets/js/frontend.js',
-            array( 'national-grid-chart-js' ),
+            [ 'national-grid-chart-js' ],
             NATIONAL_GRID_VERSION,
             true
         );
@@ -121,7 +121,7 @@ class National_Grid_Frontend {
         wp_localize_script(
             'national-grid-frontend',
             'nationalGridFrontend',
-            array(
+            [
                 'ajaxUrl' => admin_url( 'admin-ajax.php' ),
                 'action' => self::AJAX_ACTION,
                 'nonce' => wp_create_nonce( self::AJAX_NONCE_ACTION ),
@@ -134,7 +134,7 @@ class National_Grid_Frontend {
                 'liveHeadingSuffix' => __( ' - Generation Mix and Type.', 'national-grid' ),
                 'timezoneLabel' => self::get_timezone_label(),
                 'timezone' => self::get_timezone_for_js(),
-            )
+            ]
         );
     }
 
@@ -146,9 +146,9 @@ class National_Grid_Frontend {
     public static function handle_frontend_data_ajax() {
         if ( ! check_ajax_referer( self::AJAX_NONCE_ACTION, 'nonce', false ) ) {
             wp_send_json_error(
-                array(
+                [
                     'message' => __( 'Invalid request token.', 'national-grid' ),
-                ),
+                ],
                 403
             );
         }
@@ -157,10 +157,10 @@ class National_Grid_Frontend {
         $chart_data = DatabaseStorage::getFrontendChartData( $limit );
 
         wp_send_json_success(
-            array(
+            [
                 'data' => $chart_data,
                 'updatedAt' => gmdate( 'Y-m-d H:i:s' ),
-            )
+            ]
         );
     }
 
