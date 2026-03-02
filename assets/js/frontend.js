@@ -5,12 +5,15 @@
     return;
   }
 
+  // Localized runtime settings injected by wp_localize_script.
   var config = window.nationalGridFrontend;
+  // All frontend widget instances on the current page.
   var widgets = document.querySelectorAll(".national-grid-frontend");
   if (!widgets.length) {
     return;
   }
 
+  // Display order for pie slices and legend entries.
   var COMPONENT_ORDER = [
     "Storage",
     "Interconnectors",
@@ -22,8 +25,10 @@
     "Gas",
   ];
 
+  // Source labels included in the clean power percentage metric.
   var CLEAN_POWER_COMPONENTS = ["Wind", "Solar", "Hydroelectric", "Biomass", "Nuclear"];
 
+  // Category definitions used to build grouped stacked bars.
   var BAR_GROUPS = [
     { label: "Renewable", components: ["Wind", "Solar", "Hydroelectric"] },
     { label: "Low Carbon", components: ["Biomass", "Nuclear"] },
@@ -31,6 +36,7 @@
     { label: "Other", components: ["Interconnectors", "Storage"] },
   ];
 
+  // Fallback palette when no explicit color mapping exists.
   var palette = [
     "#1b4965",
     "#2a9d8f",
@@ -42,6 +48,7 @@
     "#8ab17d",
   ];
 
+  // Canonical color mapping for known generation labels.
   var colorByLabel = {
     Gas: "#9E8B73",
     Wind: "#5FC79A",
@@ -53,6 +60,7 @@
     Storage: "#556A85",
   };
 
+  // Draws percentage labels directly on pie slices.
   var piePercentLabelsPlugin = {
     id: "nationalGridPiePercentLabels",
     afterDatasetsDraw: function (chart) {
@@ -96,6 +104,7 @@
     },
   };
 
+  // Draws a white center with total generation value inside the pie.
   var pieCenterTotalPlugin = {
     id: "nationalGridPieCenterTotal",
     afterDatasetsDraw: function (chart) {
@@ -139,6 +148,7 @@
     },
   };
 
+  // Draws GW labels centered on visible stacked bar segments.
   var barSegmentLabelsPlugin = {
     id: "nationalGridBarSegmentLabels",
     afterDatasetsDraw: function (chart) {
@@ -174,6 +184,7 @@
     },
   };
 
+  // Sums numeric dataset values, skipping non-finite entries.
   function getDatasetTotal(dataset) {
     if (!dataset || !Array.isArray(dataset.data)) {
       return 0;
@@ -185,6 +196,7 @@
     }, 0);
   }
 
+  // Returns non-negative numeric component value from pie map.
   function getComponentValue(pieMap, label) {
     var value = pieMap && Object.prototype.hasOwnProperty.call(pieMap, label) ? Number(pieMap[label]) : 0;
     if (!Number.isFinite(value)) {
@@ -194,6 +206,7 @@
     return Math.max(0, value);
   }
 
+  // Normalizes raw chart payload into pie chart input data.
   function buildPieData(chartData) {
     if (!chartData || !chartData.pie || typeof chartData.pie !== "object") {
       return null;
@@ -230,6 +243,7 @@
     };
   }
 
+  // Builds grouped stacked-bar data from the latest pie values.
   function buildBarData(chartData) {
     if (!chartData || !chartData.pie || typeof chartData.pie !== "object") {
       return null;
@@ -271,6 +285,7 @@
     };
   }
 
+  // Renders one shared legend for both charts.
   function renderSharedLegend(widget, chartData) {
     var legendNode = widget.querySelector(".national-grid-frontend-legend");
     if (!legendNode) {
@@ -301,6 +316,7 @@
     legendNode.innerHTML = html;
   }
 
+  // Displays status text and toggles visibility/error state.
   function renderStatus(widget, text, isError) {
     var statusNode = widget.querySelector(".national-grid-frontend-status");
     if (!statusNode) {
@@ -312,6 +328,7 @@
     statusNode.classList.toggle("is-error", !!isError);
   }
 
+  // Parses UTC timestamp string from backend payload.
   function parseUtcDateTime(value) {
     if (typeof value !== "string" || !value) {
       return null;
@@ -326,6 +343,7 @@
     return parsed;
   }
 
+  // Formats date into configured timezone components.
   function getTzParts(date) {
     var formatter = new Intl.DateTimeFormat("en-GB", {
       timeZone: config.timezone || "UTC",
@@ -352,6 +370,7 @@
     };
   }
 
+  // Renders the live heading with time/day in site timezone.
   function renderLiveHeading(widget, pointTime) {
     var headingNode = widget.querySelector(".national-grid-frontend-live-heading");
     if (!headingNode) {
@@ -396,6 +415,7 @@
       (config.liveHeadingSuffix || " - Generation Mix and Type.");
   }
 
+  // Renders clean power percentage derived from selected sources.
   function renderCleanPowerHeading(widget, chartData) {
     var headingNode = widget.querySelector(".national-grid-frontend-clean-power-heading");
     if (!headingNode) {
@@ -415,6 +435,7 @@
     headingNode.textContent = "Live Percentage Clean Power: " + percentage.toFixed(1) + "%";
   }
 
+  // Creates the live generation pie chart instance.
   function createPieChart(widget, chartData) {
     var canvas = widget.querySelector(".national-grid-frontend-chart-pie");
     if (!canvas) {
@@ -472,6 +493,7 @@
     });
   }
 
+  // Creates the grouped stacked bar chart instance.
   function createBarChart(widget, chartData) {
     var canvas = widget.querySelector(".national-grid-frontend-chart-bar");
     if (!canvas) {
@@ -525,6 +547,7 @@
     });
   }
 
+  // Updates pie chart data and returns associated point timestamp.
   function updatePieChart(chart, chartData) {
     if (!chart) {
       return "";
@@ -552,6 +575,7 @@
     return pieData.time || "";
   }
 
+  // Updates bar chart series from latest payload.
   function updateBarChart(chart, chartData) {
     if (!chart) {
       return;
@@ -570,6 +594,7 @@
     chart.update();
   }
 
+  // Fetches latest chart data via AJAX and updates widget UI.
   function fetchData(widget, chartState) {
     var formData = new window.FormData();
     var limit = parseInt(widget.getAttribute("data-limit"), 10) || 48;
@@ -616,6 +641,7 @@
       });
   }
 
+  // Initializes charts and periodic refresh for each widget instance.
   widgets.forEach(function (widget) {
     var payloadNode = widget.querySelector(".national-grid-frontend-payload");
     if (!payloadNode) {
@@ -653,6 +679,7 @@
     }
 
     var intervalMinutes = parseInt(config.timeoutMinutes, 10) || 5;
+    // Keeps widget data fresh using backend-configured refresh interval.
     window.setInterval(function () {
       fetchData(widget, chartState);
     }, intervalMinutes * 60 * 1000);

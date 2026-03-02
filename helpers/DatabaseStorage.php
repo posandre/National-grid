@@ -5,8 +5,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class DatabaseStorage {
+    /** Log status value for successful events. */
     private const STATUS_SUCCESS = 'success';
+    /** Log status value for failed events. */
     private const STATUS_ERROR = 'error';
+    /** Maps frontend pie labels to storage columns used for aggregation. */
     private const FRONTEND_PIE_MAPPING = array(
         'Gas' => array( 'ccgt', 'ocgt' ),
         'Wind' => array( 'wind', 'embedded_wind' ),
@@ -18,20 +21,50 @@ class DatabaseStorage {
         'Storage' => array( 'pumped', 'battery' ),
     );
 
+    /**
+     * Returns fully-qualified logs table name.
+     *
+     * @return string
+     */
     private static function getLogsTableName() {
         global $wpdb;
 
         return $wpdb->prefix . 'national_grid_logs';
     }
 
+    /**
+     * Stores a success event in logs.
+     *
+     * @param string $source Log source label.
+     * @param string $message Log message.
+     * @param array<string, mixed> $context Additional context payload.
+     * @return bool
+     */
     public static function logSuccess( $source, $message, array $context = array() ) {
         return self::logEvent( $source, self::STATUS_SUCCESS, $message, $context );
     }
 
+    /**
+     * Stores an error event in logs.
+     *
+     * @param string $source Log source label.
+     * @param string $message Log message.
+     * @param array<string, mixed> $context Additional context payload.
+     * @return bool
+     */
     public static function logError( $source, $message, array $context = array() ) {
         return self::logEvent( $source, self::STATUS_ERROR, $message, $context );
     }
 
+    /**
+     * Stores a log event row with source, status and context.
+     *
+     * @param string $source Log source label.
+     * @param string $status Event status value.
+     * @param string $message Log message.
+     * @param array<string, mixed> $context Additional context payload.
+     * @return bool
+     */
     public static function logEvent( $source, $status, $message, array $context = array() ) {
         global $wpdb;
 
@@ -51,6 +84,12 @@ class DatabaseStorage {
         return false !== $result;
     }
 
+    /**
+     * Returns recent log rows sorted by newest first.
+     *
+     * @param int $limit Max rows to return.
+     * @return array<int, array<string, mixed>>
+     */
     public static function getRecentLogs( $limit = 200 ) {
         global $wpdb;
 
@@ -66,6 +105,11 @@ class DatabaseStorage {
         return is_array( $rows ) ? $rows : array();
     }
 
+    /**
+     * Removes all rows from logs table.
+     *
+     * @return int|false
+     */
     public static function clearLogs() {
         global $wpdb;
 
@@ -75,6 +119,8 @@ class DatabaseStorage {
 
     /**
      * Returns true when both generation tables use InnoDB and transactions are safe.
+     *
+     * @return bool
      */
     public static function canUseGenerationTransactions(): bool {
         global $wpdb;
@@ -101,6 +147,10 @@ class DatabaseStorage {
     }
 
     /**
+     * Updates generation storage tables from five-minute input rows.
+     *
+     * @param array<int|string, mixed> $data Raw generation rows indexed by time.
+     * @return array<string, int>|false
      * @throws DataException
      */
     public static function updateGeneration($data) {
@@ -239,6 +289,10 @@ class DatabaseStorage {
     }
 
     /**
+     * Updates half-hour demand storage table from parsed demand rows.
+     *
+     * @param array<int, array<int, mixed>> $data Parsed demand rows.
+     * @return array<string, int>|false
      * @throws DataException
      */
     public static function updateDemand(array $data) {
@@ -287,6 +341,7 @@ class DatabaseStorage {
      * latest half-hour.
      *
      * @param array $data    The data
+     * @return int|false
      */
     private static function updateDemandData(array $data) {
         $earliest = self::getEarliestHalfHour();
@@ -321,6 +376,7 @@ class DatabaseStorage {
      * @param string $table   The table
      * @param array  $columns The columns to update
      * @param array  $data    The data
+     * @return int|false
      */
     private static function updatePastTimeSeries(
         string $table,
@@ -394,6 +450,7 @@ class DatabaseStorage {
      * Returns an ON DUPLICATE KEY UPDATE clause.
      *
      * @param array $columns The columns
+     * @return string
      */
     private static function getOnDuplicateKeyUpdateClause( array $columns ): string {
         $parts = array_map(
@@ -408,7 +465,11 @@ class DatabaseStorage {
         return ' ON DUPLICATE KEY UPDATE ' . implode( ', ', $parts );
     }
 
-    /** Returns the latest half-hour, as a YYYY-MM-DD HH:MM:SS string. */
+    /**
+     * Returns the latest half-hour, as a YYYY-MM-DD HH:MM:SS string.
+     *
+     * @return string
+     */
     private static function getLatestHalfHour(): string {
         global $wpdb;
 
@@ -446,6 +507,8 @@ class DatabaseStorage {
      * Returns the earliest half hour, as a YYYY-MM-DD HH:MM:SS string. The return
      * value represents the latest midnight more than four weeks ago; this ensures
      * that the half-hourly data represents complete days for aggregation.
+     *
+     * @return string
      */
     private static function getEarliestHalfHour(): string {
         $now = time();
@@ -461,7 +524,11 @@ class DatabaseStorage {
         return gmdate( 'Y-m-d H:i:s', $four_weeks_ago_midnight );
     }
 
-    /** Deletes old half-hourly data to reduce the size of the database. */
+    /**
+     * Deletes old half-hourly data to reduce the size of the database.
+     *
+     * @return int|false
+     */
     private static function deleteOldHalfHours() {
         global $wpdb;
 
@@ -476,6 +543,12 @@ class DatabaseStorage {
         return $wpdb->query( $sql );
     }
 
+    /**
+     * Returns the latest row from a table as an associative map.
+     *
+     * @param string $table Table suffix or full table name.
+     * @return array<string, mixed>
+     */
     private static function getLatestMap( string $table ): array {
         global $wpdb;
 
@@ -502,6 +575,12 @@ class DatabaseStorage {
         return $default_map;
     }
 
+    /**
+     * Builds SQL AVG(...) projection for a set of numeric columns.
+     *
+     * @param array<int, string> $columns Column names.
+     * @return string
+     */
     private static function getAveragesExpression( array $columns ): string {
         return implode(
             ', ',
@@ -519,6 +598,8 @@ class DatabaseStorage {
      * Aggregates generation data from the five-minute time series into the
      * half-hour time series, propagating forward the most recent half-hour
      * non-generation values.
+     *
+     * @return bool|int
      */
     private static function aggregateGeneration() {
         global $wpdb;
@@ -610,6 +691,11 @@ class DatabaseStorage {
         return true;
     }
 
+    /**
+     * Returns latest five-minute generation row.
+     *
+     * @return array<string, mixed>
+     */
     public static function getLatestFiveMinuteGeneration() {
         global $wpdb;
 
@@ -624,6 +710,11 @@ class DatabaseStorage {
         return $row;
     }
 
+    /**
+     * Returns latest half-hour row or empty array when not available.
+     *
+     * @return array<string, mixed>
+     */
     public static function getLatestHalfHourRow() {
         $rows = self::getRecentHalfHours( 1 );
         if ( empty( $rows ) ) {
@@ -633,6 +724,13 @@ class DatabaseStorage {
         return $rows[0];
     }
 
+    /**
+     * Safely extracts numeric value from associative row.
+     *
+     * @param array<string, mixed> $row Source row.
+     * @param string $key Column key.
+     * @return float
+     */
     private static function getNumericFromRow( array $row, $key ) {
         if ( ! isset( $row[ $key ] ) ) {
             return 0.0;
@@ -641,6 +739,13 @@ class DatabaseStorage {
         return (float) $row[ $key ];
     }
 
+    /**
+     * Builds frontend pie values from latest generation and demand rows.
+     *
+     * @param array<string, mixed> $latest_five_minutes Latest five-minute row.
+     * @param array<string, mixed> $latest_half_hour Latest half-hour row.
+     * @return array<string, float>
+     */
     private static function buildFrontendPieData( array $latest_five_minutes, array $latest_half_hour ) {
         $pie = array();
 
@@ -670,6 +775,12 @@ class DatabaseStorage {
         return $pie;
     }
 
+    /**
+     * Returns recent half-hour rows in chronological order.
+     *
+     * @param int $limit Max rows to return.
+     * @return array<int, array<string, mixed>>
+     */
     public static function getRecentHalfHours( $limit = 1 ) {
         global $wpdb;
 
@@ -688,6 +799,12 @@ class DatabaseStorage {
         return array_reverse( $rows );
     }
 
+    /**
+     * Builds chart payload for frontend rendering.
+     *
+     * @param int $limit Max half-hour points to include.
+     * @return array<string, mixed>
+     */
     public static function getFrontendChartData( $limit = 1 ) {
         $rows = self::getRecentHalfHours( $limit );
         $latest_five_minutes = self::getLatestFiveMinuteGeneration();

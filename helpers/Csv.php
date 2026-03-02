@@ -9,6 +9,7 @@ class Csv {
    * @param string $url             The URL of the CSV data
    * @param array  $requiredHeaders The required headers
    * @param array  $ignoredHeaders  The ignored headers
+   * @return array<int, array<int, string>>
    *
    * @throws DataException If the data was invalid
    */

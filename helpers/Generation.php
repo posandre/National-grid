@@ -1,6 +1,7 @@
 <?php
 /** Updates generation data. */
 class Generation {
+    /** Ordered storage keys for generation and interconnector values. */
     public const KEYS = [
         'coal',       // Coal-fired generation (вугільні електростанції)
         'ccgt',       // Combined Cycle Gas Turbine (газові ТЕС комбінованого циклу)
@@ -27,6 +28,7 @@ class Generation {
         'greenlink'   // Greenlink – GB ↔ Ireland
     ];
 
+    /** Source fuel type to output column index mapping. */
     public const COLUMNS = [
         'COAL'    => 1,
         'CCGT'    => 2,
@@ -54,7 +56,7 @@ class Generation {
     /**
      * Updates the generation data.
      *
-     * @param Database $database The database instance
+     * @return array<string, int>|false
      *
      * @throws DataException If the data was invalid
      * @throws Throwable
@@ -102,6 +104,7 @@ class Generation {
    * Returns the time for an item.
    *
    * @param array $item The item
+   * @return string
    *
    * @throws DataException If the time was invalid
    */
@@ -123,6 +126,7 @@ class Generation {
    * Returns the column for an item.
    *
    * @param array $item The item
+   * @return int
    *
    * @throws DataException If the fuel type was invalid
    */
@@ -144,6 +148,7 @@ class Generation {
    * Returns the generation for an item.
    *
    * @param array $item The item
+   * @return float
    *
    * @throws DataException If the generation was invalid
    */

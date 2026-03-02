@@ -2,6 +2,7 @@
 
 /** Functions for handling times. */
 class Time {
+  /** Maps 3-letter month abbreviations to month numbers. */
   private const MONTHS = [
     'JAN' => 1,
     'FEB' => 2,
@@ -22,6 +23,7 @@ class Time {
    *
    * @param string $time     The time
    * @param int    $interval The time interval, in minutes
+   * @return string
    *
    * @throws DataException If the time is invalid
    */
@@ -58,6 +60,7 @@ class Time {
    *
    * @param string $date   The settlement date
    * @param int    $period The half hour settlement period
+   * @return string
    *
    * @throws DataException If the date or period is invalid
    */

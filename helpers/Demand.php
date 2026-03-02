@@ -2,6 +2,7 @@
 
 /** Updates data from the National Energy System Operator Demand Data Update. */
 class Demand {
+    /** Demand series keys stored in half-hour table. */
     public const KEYS = [
         'embedded_wind',   // Embedded wind generation – вітрова генерація, підключена до розподільчих мереж (не на рівні transmission)
         'embedded_solar',  // Embedded solar generation – сонячна генерація у distribution network (дахові та локальні СЕС)
@@ -81,6 +82,7 @@ class Demand {
    * Returns the datum for an item.
    *
    * @param array $item The item
+   * @return array<int, float|string>
    *
    * @throws DataException If the data was invalid
    */

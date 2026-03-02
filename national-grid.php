@@ -11,13 +11,20 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Plugin release version used for cache-busting assets.
 define( 'NATIONAL_GRID_VERSION', '1.0.0' );
+// Absolute path to this plugin directory.
 define( 'NATIONAL_GRID_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+// Public URL to this plugin directory.
 define( 'NATIONAL_GRID_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
+// Option name for update interval (minutes).
 define( 'NATIONAL_GRID_OPTION_TIMEOUT', 'national_grid_timeout' );
+// Option name for frontend module title override.
 define( 'NATIONAL_GRID_OPTION_MODULE_TITLE', 'national_grid_module_title' );
+// Option name for frontend module description override.
 define( 'NATIONAL_GRID_OPTION_MODULE_DESCRIPTION', 'national_grid_module_description' );
+// Option name for automatic cron updates toggle.
 define( 'NATIONAL_GRID_OPTION_AUTO_UPDATE', 'national_grid_auto_update' );
 
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/DataException.php';
@@ -30,6 +37,11 @@ require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Demand.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'includes/class-national-grid-admin.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'includes/class-national-grid-frontend.php';
 
+/**
+ * Creates plugin database tables on activation.
+ *
+ * @return void
+ */
 function national_grid_create_tables() {
     global $wpdb;
 
@@ -112,6 +124,11 @@ function national_grid_create_tables() {
     }
 }
 
+/**
+ * Initializes default options and creates storage tables.
+ *
+ * @return void
+ */
 function national_grid_activate() {
     if ( false === get_option( NATIONAL_GRID_OPTION_TIMEOUT, false ) ) {
         add_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 );
@@ -133,6 +150,11 @@ function national_grid_activate() {
 }
 register_activation_hook( __FILE__, 'national_grid_activate' );
 
+/**
+ * Boots plugin modules after WordPress is loaded.
+ *
+ * @return void
+ */
 function national_grid_bootstrap() {
     National_Grid_Admin::init();
     National_Grid_Frontend::init();

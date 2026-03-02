@@ -5,13 +5,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class National_Grid_Admin {
+    /** Settings page slug used in admin URLs. */
     private const PAGE_SLUG = 'national-grid-settings';
+    /** Action name for manual update requests. */
     private const UPDATE_ACTION = 'national_grid_update_data';
+    /** Action name for fetching rendered log section HTML. */
     private const FETCH_LOG_ACTION = 'national_grid_fetch_log_section';
+    /** Action name for clearing stored logs. */
     private const CLEAR_LOG_ACTION = 'national_grid_clear_log';
+    /** Cron hook name for scheduled data updates. */
     private const CRON_HOOK = 'national_grid_cron_update_data';
+    /** Custom cron schedule key based on configured timeout. */
     private const CRON_SCHEDULE = 'national_grid_custom_interval';
 
+    /**
+     * Registers admin page, settings, actions and cron hooks.
+     *
+     * @return void
+     */
     public static function init() {
         add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
         add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
@@ -28,6 +39,11 @@ class National_Grid_Admin {
         add_action( self::CRON_HOOK, array( __CLASS__, 'handle_cron_update' ) );
     }
 
+    /**
+     * Registers plugin settings page in WordPress admin.
+     *
+     * @return void
+     */
     public static function register_menu() {
         add_options_page(
             __( 'National Grid', 'national-grid' ),
@@ -38,6 +54,11 @@ class National_Grid_Admin {
         );
     }
 
+    /**
+     * Registers plugin settings, sections and fields.
+     *
+     * @return void
+     */
     public static function register_settings() {
         register_setting(
             'national_grid_settings',
@@ -119,6 +140,12 @@ class National_Grid_Admin {
         );
     }
 
+    /**
+     * Sanitizes timeout value in minutes.
+     *
+     * @param mixed $value Raw timeout option value.
+     * @return int
+     */
     public static function sanitize_timeout( $value ) {
         $value = absint( $value );
 
@@ -129,10 +156,21 @@ class National_Grid_Admin {
         return $value;
     }
 
+    /**
+     * Normalizes auto-update toggle to 1 or 0.
+     *
+     * @param mixed $value Raw auto-update option value.
+     * @return int
+     */
     public static function sanitize_auto_update( $value ) {
         return ! empty( $value ) ? 1 : 0;
     }
 
+    /**
+     * Renders timeout input field.
+     *
+     * @return void
+     */
     public static function render_timeout_field() {
         $value = (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 );
         printf(
@@ -143,6 +181,11 @@ class National_Grid_Admin {
         );
     }
 
+    /**
+     * Renders automatic update checkbox field.
+     *
+     * @return void
+     */
     public static function render_auto_update_field() {
         $value = (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 );
         printf(
@@ -153,6 +196,11 @@ class National_Grid_Admin {
         );
     }
 
+    /**
+     * Renders module title input field.
+     *
+     * @return void
+     */
     public static function render_module_title_field() {
         $value = (string) get_option( NATIONAL_GRID_OPTION_MODULE_TITLE, '' );
         printf(
@@ -162,6 +210,11 @@ class National_Grid_Admin {
         );
     }
 
+    /**
+     * Renders module description textarea field.
+     *
+     * @return void
+     */
     public static function render_module_description_field() {
         $value = (string) get_option( NATIONAL_GRID_OPTION_MODULE_DESCRIPTION, '' );
         printf(
@@ -171,6 +224,12 @@ class National_Grid_Admin {
         );
     }
 
+    /**
+     * Adds custom cron schedule based on configured timeout.
+     *
+     * @param array<string, mixed> $schedules Existing cron schedules.
+     * @return array<string, mixed>
+     */
     public static function add_cron_schedule( $schedules ) {
         $minutes = max( 1, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) );
         $schedules[ self::CRON_SCHEDULE ] = array(
@@ -181,6 +240,11 @@ class National_Grid_Admin {
         return $schedules;
     }
 
+    /**
+     * Keeps scheduled cron event in sync with current settings.
+     *
+     * @return void
+     */
     public static function maybe_sync_cron_event() {
         $enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 );
         $timestamp = wp_next_scheduled( self::CRON_HOOK );
@@ -198,10 +262,21 @@ class National_Grid_Admin {
         }
     }
 
+    /**
+     * Runs scheduled data update.
+     *
+     * @return void
+     */
     public static function handle_cron_update() {
         self::update_data( 'cron' );
     }
 
+    /**
+     * Executes generation and demand updates and writes logs.
+     *
+     * @param string $source Update source label.
+     * @return array<string, mixed>
+     */
     public static function update_data( $source = 'manual' ) {
         $source = in_array( $source, array( 'manual', 'cron' ), true ) ? $source : 'manual';
 
@@ -275,6 +350,11 @@ class National_Grid_Admin {
         }
     }
 
+    /**
+     * Handles update request from standard admin form submit.
+     *
+     * @return void
+     */
     public static function handle_update_data() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( esc_html__( 'You do not have permission to do that.', 'national-grid' ) );
@@ -293,6 +373,11 @@ class National_Grid_Admin {
         exit;
     }
 
+    /**
+     * Handles update request from admin AJAX action.
+     *
+     * @return void
+     */
     public static function handle_update_data_ajax() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_send_json_error(
@@ -333,6 +418,11 @@ class National_Grid_Admin {
         );
     }
 
+    /**
+     * Returns refreshed log section HTML via AJAX.
+     *
+     * @return void
+     */
     public static function handle_fetch_log_section_ajax() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_send_json_error(
@@ -363,6 +453,11 @@ class National_Grid_Admin {
         );
     }
 
+    /**
+     * Clears stored update logs.
+     *
+     * @return void
+     */
     public static function handle_clear_log() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( esc_html__( 'You do not have permission to do that.', 'national-grid' ) );
@@ -376,6 +471,12 @@ class National_Grid_Admin {
         exit;
     }
 
+    /**
+     * Enqueues admin assets on plugin settings page only.
+     *
+     * @param string $hook Current admin page hook suffix.
+     * @return void
+     */
     public static function enqueue_assets( $hook ) {
         if ( 'settings_page_' . self::PAGE_SLUG !== $hook ) {
             return;
@@ -407,6 +508,11 @@ class National_Grid_Admin {
         );
     }
 
+    /**
+     * Renders update log table section.
+     *
+     * @return void
+     */
     private static function render_logs_section() {
         $logs = DatabaseStorage::getRecentLogs( 200 );
 
@@ -461,12 +567,22 @@ class National_Grid_Admin {
         echo '</div>';
     }
 
+    /**
+     * Returns rendered update log section as HTML.
+     *
+     * @return string
+     */
     private static function get_logs_section_html() {
         ob_start();
         self::render_logs_section();
         return ob_get_clean();
     }
 
+    /**
+     * Renders the plugin settings page.
+     *
+     * @return void
+     */
     public static function render_page() {
         if ( ! current_user_can( 'manage_options' ) ) {
             return;

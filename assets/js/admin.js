@@ -1,8 +1,13 @@
 (function ($) {
+    // Binds admin UI behavior when settings page DOM is ready.
     $(function () {
+        // Primary action button for manual data refresh.
         var $button = $('#national-grid-update-button');
+        // Spinner element shown while update request is in progress.
         var $loader = $('#national-grid-update-loader');
+        // Notification area for success/error feedback.
         var $message = $('#national-grid-update-message');
+        // Replaces the current log section with server-rendered HTML.
         var replaceLogSection = function (html) {
             if (!html) {
                 return;
@@ -13,6 +18,7 @@
                 $current.replaceWith(html);
             }
         };
+        // Requests fresh log section markup from admin AJAX endpoint.
         var refreshLogSection = function () {
             $.post(nationalGridAdmin.ajaxUrl, {
                 action: nationalGridAdmin.fetchLogAction,
@@ -24,6 +30,7 @@
             });
         };
 
+        // Starts manual data update and renders status/log feedback.
         $button.on('click', function () {
             $message.removeClass('notice notice-success notice-error inline').empty();
             $button.prop('disabled', true);

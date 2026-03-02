@@ -5,15 +5,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class National_Grid_Frontend {
+    /** Shortcode tag used to render the frontend widget. */
     private const SHORTCODE = 'show-national-grid';
+    /** AJAX action name for frontend data refresh requests. */
     private const AJAX_ACTION = 'national_grid_frontend_data';
+    /** Nonce action name used to validate frontend AJAX requests. */
     private const AJAX_NONCE_ACTION = 'national_grid_frontend_nonce';
+    /** Fallback widget title when no custom value is configured. */
     private const DEFAULT_TITLE = 'National Grid - Live';
+    /** Fallback widget description when no custom value is configured. */
     private const DEFAULT_DESCRIPTION = 'National grid: Today-Generation Mix and Type';
 
     private static $instance_counter = 0;
     private static $assets_required = false;
 
+    /**
+     * Registers frontend shortcode, assets and AJAX handlers.
+     *
+     * @return void
+     */
     public static function init() {
         add_shortcode( self::SHORTCODE, array( __CLASS__, 'render_shortcode' ) );
         add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
@@ -21,6 +31,12 @@ class National_Grid_Frontend {
         add_action( 'wp_ajax_nopriv_' . self::AJAX_ACTION, array( __CLASS__, 'handle_frontend_data_ajax' ) );
     }
 
+    /**
+     * Renders shortcode output with initial chart payload.
+     *
+     * @param array<string, mixed> $atts Shortcode attributes.
+     * @return string
+     */
     public static function render_shortcode( $atts = array() ) {
         self::mark_assets_required();
         self::$instance_counter++;
@@ -60,10 +76,20 @@ class National_Grid_Frontend {
         );
     }
 
+    /**
+     * Marks that frontend assets are required for the current request.
+     *
+     * @return void
+     */
     public static function mark_assets_required() {
         self::$assets_required = true;
     }
 
+    /**
+     * Enqueues frontend CSS/JS and localized runtime config.
+     *
+     * @return void
+     */
     public static function enqueue_assets() {
         if ( ! self::should_enqueue_assets() ) {
             return;
@@ -112,6 +138,11 @@ class National_Grid_Frontend {
         );
     }
 
+    /**
+     * Handles frontend AJAX data refresh requests.
+     *
+     * @return void
+     */
     public static function handle_frontend_data_ajax() {
         if ( ! check_ajax_referer( self::AJAX_NONCE_ACTION, 'nonce', false ) ) {
             wp_send_json_error(
@@ -133,6 +164,12 @@ class National_Grid_Frontend {
         );
     }
 
+    /**
+     * Resolves module title from shortcode attr, option or fallback.
+     *
+     * @param mixed $shortcode_title Title from shortcode attributes.
+     * @return string
+     */
     private static function resolve_title( $shortcode_title ) {
         $shortcode_title = is_string( $shortcode_title ) ? trim( $shortcode_title ) : '';
         if ( '' !== $shortcode_title ) {
@@ -147,6 +184,12 @@ class National_Grid_Frontend {
         return self::DEFAULT_TITLE;
     }
 
+    /**
+     * Resolves module description from shortcode attr, option or fallback.
+     *
+     * @param mixed $shortcode_description Description from shortcode attributes.
+     * @return string
+     */
     private static function resolve_description( $shortcode_description ) {
         $shortcode_description = is_string( $shortcode_description ) ? trim( $shortcode_description ) : '';
         if ( '' !== $shortcode_description ) {
@@ -161,6 +204,13 @@ class National_Grid_Frontend {
         return self::DEFAULT_DESCRIPTION;
     }
 
+    /**
+     * Renders a template and returns its buffered HTML output.
+     *
+     * @param string $template_name Template file name.
+     * @param array<string, mixed> $data Template variables.
+     * @return string
+     */
     private static function render_template( $template_name, array $data ) {
         $template_path = NATIONAL_GRID_PLUGIN_DIR . 'templates/' . ltrim( (string) $template_name, '/\\' );
         if ( ! is_readable( $template_path ) ) {
@@ -173,6 +223,12 @@ class National_Grid_Frontend {
         return ob_get_clean();
     }
 
+    /**
+     * Builds the live heading string with site timezone formatting.
+     *
+     * @param array<string, mixed> $chart_data Frontend chart payload.
+     * @return string
+     */
     private static function build_live_heading( array $chart_data ) {
         $time = '';
         if ( isset( $chart_data['latest_five_minutes']['time'] ) ) {
@@ -211,6 +267,11 @@ class National_Grid_Frontend {
         }
     }
 
+    /**
+     * Returns site timezone label for UI display.
+     *
+     * @return string
+     */
     private static function get_timezone_label() {
         $label = wp_timezone_string();
         if ( '' !== $label ) {
@@ -221,6 +282,11 @@ class National_Grid_Frontend {
         return $site_tz->getName();
     }
 
+    /**
+     * Returns site timezone identifier for JavaScript date formatting.
+     *
+     * @return string
+     */
     private static function get_timezone_for_js() {
         $tz = wp_timezone_string();
         if ( '' !== $tz ) {
@@ -230,6 +296,11 @@ class National_Grid_Frontend {
         return 'UTC';
     }
 
+    /**
+     * Determines whether frontend assets should be enqueued.
+     *
+     * @return bool
+     */
     private static function should_enqueue_assets() {
         if ( is_admin() ) {
             return false;

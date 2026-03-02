@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 <div class="national-grid-frontend" id="<?php echo esc_attr( (string) $instance_id ); ?>" data-limit="<?php echo esc_attr( (int) $limit ); ?>">
-    <h3 class="national-grid-frontend-title"><?php echo esc_html( (string) $title ); ?></h3>
+    <h2 class="national-grid-frontend-title"><?php echo esc_html( (string) $title ); ?></h2>
     <p class="national-grid-frontend-description"><?php echo esc_html( (string) $description ); ?></p>
     <p class="national-grid-frontend-live-heading"><?php echo esc_html( (string) $live_heading ); ?></p>
     <p class="national-grid-frontend-clean-power-heading"></p>
