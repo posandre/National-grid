@@ -45,6 +45,7 @@ class National_Grid_Frontend {
             [
                 'title' => '',
                 'description' => '',
+                'additional_class' => '',
             ],
             $atts,
             self::SHORTCODE
@@ -52,6 +53,18 @@ class National_Grid_Frontend {
 
         $title = self::resolve_title( $atts['title'] );
         $description = self::resolve_description( $atts['description'] );
+        $additional_class = trim( (string) $atts['additional_class'] );
+        $additional_class = '' !== $additional_class
+            ? implode(
+                ' ',
+                array_filter(
+                    array_map(
+                        'sanitize_html_class',
+                        preg_split( '/\s+/', $additional_class )
+                    )
+                )
+            )
+            : '';
         $chart_data = DatabaseStorage::getFrontendChartData();
         $instance_id = 'national-grid-frontend-' . self::$instance_counter;
 
@@ -67,6 +80,7 @@ class National_Grid_Frontend {
                 'instance_id' => $instance_id,
                 'title' => $title,
                 'description' => $description,
+                'additional_class' => $additional_class,
                 'payload_json' => wp_json_encode( $payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ),
                 'live_heading' => self::build_live_heading( $chart_data ),
             ]

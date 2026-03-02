@@ -5,6 +5,7 @@
  * @var string $instance_id
  * @var string $title
  * @var string $description
+ * @var string $additional_class
  * @var string $payload_json
  * @var string $live_heading
  */
@@ -13,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 ?>
-<div class="national-grid-frontend" id="<?php echo esc_attr( (string) $instance_id ); ?>">
+<div class="national-grid-frontend<?php echo '' !== trim( (string) $additional_class ) ? ' ' . esc_attr( trim( (string) $additional_class ) ) : ''; ?>" id="<?php echo esc_attr( (string) $instance_id ); ?>">
     <?php if ( '' !== trim( (string) $title ) || '' !== trim( (string) $description ) ) : ?>
         <div class="national-grid-frontend-header">
             <?php if ( '' !== trim( (string) $title ) ) : ?>
