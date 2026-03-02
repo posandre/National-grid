@@ -108,21 +108,38 @@ class DatabaseStorage {
      * Returns recent log rows sorted by newest first.
      *
      * @param int $limit Max rows to return.
+     * @param int $offset Rows to skip from the top.
      * @return array<int, array<string, mixed>>
      */
-    public static function getRecentLogs( $limit = 200 ) {
+    public static function getRecentLogs( $limit = 200, $offset = 0 ) {
         global $wpdb;
 
         $limit = max( 1, (int) $limit );
+        $offset = max( 0, (int) $offset );
         $table_name = self::getLogsTableName();
         $sql = $wpdb->prepare(
-            'SELECT `id`, `created_at`, `source`, `status`, `message`, `context` FROM `' . esc_sql( $table_name ) . '` ORDER BY `id` DESC LIMIT %d',
-            $limit
+            'SELECT `id`, `created_at`, `source`, `status`, `message`, `context` FROM `' . esc_sql( $table_name ) . '` ORDER BY `id` DESC LIMIT %d OFFSET %d',
+            $limit,
+            $offset
         );
 
         $rows = $wpdb->get_results( $sql, ARRAY_A );
 
         return is_array( $rows ) ? $rows : [];
+    }
+
+    /**
+     * Returns total number of log rows.
+     *
+     * @return int
+     */
+    public static function getLogsCount(): int {
+        global $wpdb;
+
+        $table_name = self::getLogsTableName();
+        $count = $wpdb->get_var( 'SELECT COUNT(*) FROM `' . esc_sql( $table_name ) . '`' );
+
+        return is_numeric( $count ) ? (int) $count : 0;
     }
 
     /**

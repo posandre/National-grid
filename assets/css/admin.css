@@ -51,3 +51,64 @@
 .national-grid-log-row-success {
     background-color: #f6fff7 !important;
 }
+
+.national-grid-admin-log-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.national-grid-admin-log-pagination-summary {
+    margin: 0;
+    color: #50575e;
+    font-size: 13px;
+}
+
+.national-grid-admin-log-pagination-links {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.national-grid-admin-log-pagination-links .page-numbers {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    background: #fff;
+    color: #1d2327;
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.national-grid-admin-log-pagination-links .page-numbers:hover,
+.national-grid-admin-log-pagination-links .page-numbers:focus {
+    border-color: #2271b1;
+    color: #2271b1;
+}
+
+.national-grid-admin-log-pagination-links .page-numbers.current {
+    border-color: #2271b1;
+    background: #2271b1;
+    color: #fff;
+    font-weight: 600;
+}
+
+@media (max-width: 782px) {
+    .national-grid-admin-log-pagination {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

@@ -514,7 +514,17 @@ class National_Grid_Admin {
      * @return void
      */
     private static function render_logs_section() {
-        $logs = DatabaseStorage::getRecentLogs( 200 );
+        $per_page = 9;
+        $current_page = isset( $_GET['log_page'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            ? max( 1, (int) $_GET['log_page'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            : 1;
+        $total_logs = DatabaseStorage::getLogsCount();
+        $total_pages = max( 1, (int) ceil( $total_logs / $per_page ) );
+        if ( $current_page > $total_pages ) {
+            $current_page = $total_pages;
+        }
+        $offset = ( $current_page - 1 ) * $per_page;
+        $logs = DatabaseStorage::getRecentLogs( $per_page, $offset );
 
         echo '<div id="national-grid-admin-log-section" class="national-grid-admin-log-section">';
         echo '<h2>' . esc_html__( 'Update Log', 'national-grid' ) . '</h2>';
@@ -564,6 +574,41 @@ class National_Grid_Admin {
         }
 
         echo '</tbody></table>';
+
+        if ( $total_pages > 1 ) {
+            $pagination_links = paginate_links(
+                [
+                    'base' => add_query_arg(
+                        [
+                            'page' => self::PAGE_SLUG,
+                            'tab' => 'logs',
+                            'log_page' => '%#%',
+                        ],
+                        admin_url( 'options-general.php' )
+                    ),
+                    'format' => '',
+                    'current' => $current_page,
+                    'total' => $total_pages,
+                    'prev_text' => __( '&laquo; Previous', 'national-grid' ),
+                    'next_text' => __( 'Next &raquo;', 'national-grid' ),
+                ]
+            );
+
+            if ( is_string( $pagination_links ) && '' !== $pagination_links ) {
+                echo '<div class="national-grid-admin-log-pagination">';
+                echo '<p class="national-grid-admin-log-pagination-summary">' . esc_html(
+                    sprintf(
+                        /* translators: 1: current page number, 2: total pages */
+                        __( 'Page %1$d of %2$d', 'national-grid' ),
+                        $current_page,
+                        $total_pages
+                    )
+                ) . '</p>';
+                echo '<div class="national-grid-admin-log-pagination-links">' . wp_kses_post( $pagination_links ) . '</div>';
+                echo '</div>';
+            }
+        }
+
         echo '</div>';
     }
 
