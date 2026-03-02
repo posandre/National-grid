@@ -467,7 +467,7 @@ class National_Grid_Admin {
 
         DatabaseStorage::clearLogs();
 
-        wp_safe_redirect( admin_url( 'options-general.php?page=' . self::PAGE_SLUG . '&national_grid_log_cleared=1' ) );
+        wp_safe_redirect( admin_url( 'options-general.php?page=' . self::PAGE_SLUG . '&tab=logs&national_grid_log_cleared=1' ) );
         exit;
     }
 
@@ -588,30 +588,73 @@ class National_Grid_Admin {
             return;
         }
 
+        $active_tab = isset( $_GET['tab'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            ? sanitize_key( (string) wp_unslash( $_GET['tab'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            : 'settings';
+        if ( ! in_array( $active_tab, [ 'settings', 'update', 'logs' ], true ) ) {
+            $active_tab = 'settings';
+        }
+
+        $settings_tab_url = add_query_arg(
+            [
+                'page' => self::PAGE_SLUG,
+                'tab' => 'settings',
+            ],
+            admin_url( 'options-general.php' )
+        );
+        $logs_tab_url = add_query_arg(
+            [
+                'page' => self::PAGE_SLUG,
+                'tab' => 'logs',
+            ],
+            admin_url( 'options-general.php' )
+        );
+        $update_tab_url = add_query_arg(
+            [
+                'page' => self::PAGE_SLUG,
+                'tab' => 'update',
+            ],
+            admin_url( 'options-general.php' )
+        );
+
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__( 'National Grid', 'national-grid' ) . '</h1>';
+        echo '<nav class="nav-tab-wrapper">';
+        echo '<a href="' . esc_url( $settings_tab_url ) . '" class="nav-tab ' . esc_attr( 'settings' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Options', 'national-grid' ) . '</a>';
+        echo '<a href="' . esc_url( $update_tab_url ) . '" class="nav-tab ' . esc_attr( 'update' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Update data', 'national-grid' ) . '</a>';
+        echo '<a href="' . esc_url( $logs_tab_url ) . '" class="nav-tab ' . esc_attr( 'logs' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Log', 'national-grid' ) . '</a>';
+        echo '</nav>';
 
         if ( isset( $_GET['national_grid_log_cleared'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Log cleared.', 'national-grid' ) . '</p></div>';
         }
 
-        echo '<form method="post" action="options.php">';
+        if ( 'settings' === $active_tab ) {
+            echo '<form method="post" action="options.php">';
 
-        settings_fields( 'national_grid_settings' );
-        do_settings_sections( self::PAGE_SLUG );
+            settings_fields( 'national_grid_settings' );
+            do_settings_sections( self::PAGE_SLUG );
 
-        echo '<div class="national-grid-admin-buttons">';
-        submit_button( __( 'Save data', 'national-grid' ), 'primary', 'submit', false );
-        echo '<hr class="national-grid-admin-divider" />';
-        echo '<div class="national-grid-admin-update-row">';
-        echo '<button type="button" id="national-grid-update-button" class="button button-secondary">' . esc_html__( 'Update data', 'national-grid' ) . '</button>';
-        echo '<span id="national-grid-update-loader" class="spinner national-grid-admin-loader"></span>';
-        echo '</div>';
-        echo '</div>';
-        echo '<div id="national-grid-update-message" class="national-grid-admin-message" aria-live="polite"></div>';
-        echo '</form>';
+            echo '<div class="national-grid-admin-buttons">';
+            submit_button( __( 'Save data', 'national-grid' ), 'primary', 'submit', false );
+            echo '</div>';
+            echo '</form>';
+        }
 
-        self::render_logs_section();
+        if ( 'update' === $active_tab ) {
+            echo '<div class="national-grid-admin-buttons">';
+            echo '<p class="description national-grid-admin-update-note" style="margin-top:12px;">' . esc_html__( 'By clicking this button, you will trigger a manual data update.', 'national-grid' ) . '</p>';
+            echo '<div class="national-grid-admin-update-row">';
+            echo '<button type="button" id="national-grid-update-button" class="button button-secondary">' . esc_html__( 'Update data', 'national-grid' ) . '</button>';
+            echo '<span id="national-grid-update-loader" class="spinner national-grid-admin-loader"></span>';
+            echo '</div>';
+            echo '</div>';
+            echo '<div id="national-grid-update-message" class="national-grid-admin-message" aria-live="polite"></div>';
+        }
+
+        if ( 'logs' === $active_tab ) {
+            self::render_logs_section();
+        }
 
         echo '</div>';
     }
