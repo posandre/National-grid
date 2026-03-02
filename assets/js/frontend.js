@@ -618,11 +618,9 @@
   // Fetches latest chart data via AJAX and updates widget UI.
   function fetchData(widget, chartState) {
     var formData = new window.FormData();
-    var limit = parseInt(widget.getAttribute("data-limit"), 10) || 48;
 
     formData.append("action", config.action);
     formData.append("nonce", config.nonce);
-    formData.append("limit", limit);
 
     return window
       .fetch(config.ajaxUrl, {

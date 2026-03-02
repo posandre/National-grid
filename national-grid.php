@@ -135,7 +135,7 @@ function national_grid_activate() {
     }
 
     if ( false === get_option( NATIONAL_GRID_OPTION_MODULE_TITLE, false ) ) {
-        add_option( NATIONAL_GRID_OPTION_MODULE_TITLE, '' );
+        add_option( NATIONAL_GRID_OPTION_MODULE_TITLE, 'National Grid - Live' );
     }
 
     if ( false === get_option( NATIONAL_GRID_OPTION_MODULE_DESCRIPTION, false ) ) {

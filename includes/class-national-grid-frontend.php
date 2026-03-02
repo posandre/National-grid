@@ -14,7 +14,7 @@ class National_Grid_Frontend {
     /** Fallback widget title when no custom value is configured. */
     private const DEFAULT_TITLE = 'National Grid - Live';
     /** Fallback widget description when no custom value is configured. */
-    private const DEFAULT_DESCRIPTION = 'National grid: Today-Generation Mix and Type';
+    private const DEFAULT_DESCRIPTION = '';
 
     private static $instance_counter = 0;
     private static $assets_required = false;
@@ -45,7 +45,6 @@ class National_Grid_Frontend {
             [
                 'title' => '',
                 'description' => '',
-                'limit' => 1,
             ],
             $atts,
             self::SHORTCODE
@@ -53,8 +52,7 @@ class National_Grid_Frontend {
 
         $title = self::resolve_title( $atts['title'] );
         $description = self::resolve_description( $atts['description'] );
-        $limit = max( 1, min( 1000, (int) $atts['limit'] ) );
-        $chart_data = DatabaseStorage::getFrontendChartData( $limit );
+        $chart_data = DatabaseStorage::getFrontendChartData();
         $instance_id = 'national-grid-frontend-' . self::$instance_counter;
 
         $payload = [
@@ -69,7 +67,6 @@ class National_Grid_Frontend {
                 'instance_id' => $instance_id,
                 'title' => $title,
                 'description' => $description,
-                'limit' => $limit,
                 'payload_json' => wp_json_encode( $payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ),
                 'live_heading' => self::build_live_heading( $chart_data ),
             ]
@@ -153,8 +150,7 @@ class National_Grid_Frontend {
             );
         }
 
-        $limit = isset( $_POST['limit'] ) ? (int) $_POST['limit'] : 1; // phpcs:ignore WordPress.Security.NonceVerification.Missing
-        $chart_data = DatabaseStorage::getFrontendChartData( $limit );
+        $chart_data = DatabaseStorage::getFrontendChartData();
 
         wp_send_json_success(
             [
@@ -176,12 +172,12 @@ class National_Grid_Frontend {
             return $shortcode_title;
         }
 
-        $option_title = trim( (string) get_option( NATIONAL_GRID_OPTION_MODULE_TITLE, '' ) );
-        if ( '' !== $option_title ) {
-            return $option_title;
+        $option_title = get_option( NATIONAL_GRID_OPTION_MODULE_TITLE, false );
+        if ( false === $option_title ) {
+            return self::DEFAULT_TITLE;
         }
 
-        return self::DEFAULT_TITLE;
+        return trim( (string) $option_title );
     }
 
     /**
@@ -196,12 +192,12 @@ class National_Grid_Frontend {
             return $shortcode_description;
         }
 
-        $option_description = trim( (string) get_option( NATIONAL_GRID_OPTION_MODULE_DESCRIPTION, '' ) );
-        if ( '' !== $option_description ) {
-            return $option_description;
+        $option_description = get_option( NATIONAL_GRID_OPTION_MODULE_DESCRIPTION, false );
+        if ( false === $option_description ) {
+            return self::DEFAULT_DESCRIPTION;
         }
 
-        return self::DEFAULT_DESCRIPTION;
+        return trim( (string) $option_description );
     }
 
     /**
