@@ -160,3 +160,25 @@ function national_grid_bootstrap() {
     National_Grid_Frontend::init();
 }
 add_action( 'plugins_loaded', 'national_grid_bootstrap' );
+
+/**
+ * Adds quick "Info" link on the Plugins page for this plugin.
+ *
+ * @param array<int, string> $links Existing action links.
+ * @return array<int, string>
+ */
+function national_grid_plugin_action_links( $links ) {
+    $base_url = admin_url( 'options-general.php?page=national-grid-settings' );
+    $settings_link = '<a href="' . esc_url( add_query_arg( 'tab', 'settings', $base_url ) ) . '">' . esc_html__( 'Settings', 'national-grid' ) . '</a>';
+    $update_link = '<a href="' . esc_url( add_query_arg( 'tab', 'update', $base_url ) ) . '">' . esc_html__( 'Update data', 'national-grid' ) . '</a>';
+    $log_link = '<a href="' . esc_url( add_query_arg( 'tab', 'logs', $base_url ) ) . '">' . esc_html__( 'Log', 'national-grid' ) . '</a>';
+    $info_link = '<a href="' . esc_url( add_query_arg( 'tab', 'info', $base_url ) ) . '">' . esc_html__( 'Info', 'national-grid' ) . '</a>';
+
+    $links[] = $settings_link;
+    $links[] = $update_link;
+    $links[] = $log_link;
+    $links[] = $info_link;
+
+    return $links;
+}
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'national_grid_plugin_action_links' );
