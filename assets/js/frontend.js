@@ -36,6 +36,9 @@
     { label: "Other", components: ["Interconnectors", "Storage"] },
   ];
 
+  // Minimum share of a stacked bar segment required to render inline label.
+  var BAR_LABEL_MIN_PERCENT = 8;
+
   // Fallback palette when no explicit color mapping exists.
   var palette = [
     "#1b4965",
@@ -172,6 +175,20 @@
         meta.data.forEach(function (bar, index) {
           var value = Number(dataset.data[index]);
           if (!Number.isFinite(value) || value <= 0) {
+            return;
+          }
+
+          var stackTotal = chart.data.datasets.reduce(function (sum, ds, dsIndex) {
+            var dsMeta = chart.getDatasetMeta(dsIndex);
+            if (!dsMeta || dsMeta.hidden) {
+              return sum;
+            }
+
+            var segmentValue = Number(ds.data[index]);
+            return Number.isFinite(segmentValue) && segmentValue > 0 ? sum + segmentValue : sum;
+          }, 0);
+          var segmentPercent = stackTotal > 0 ? (value / stackTotal) * 100 : 0;
+          if (segmentPercent < BAR_LABEL_MIN_PERCENT) {
             return;
           }
 
