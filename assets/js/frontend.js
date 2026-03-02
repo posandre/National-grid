@@ -12,14 +12,14 @@
   }
 
   var COMPONENT_ORDER = [
-    "Gas",
-    "Wind",
-    "Solar",
-    "Hydroelectric",
-    "Nuclear",
-    "Biomass",
-    "Interconnectors",
     "Storage",
+    "Interconnectors",
+    "Biomass",
+    "Nuclear",
+    "Hydroelectric",
+    "Solar",
+    "Wind",
+    "Gas",
   ];
 
   var CLEAN_POWER_COMPONENTS = ["Wind", "Solar", "Hydroelectric", "Biomass"];
