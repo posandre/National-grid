@@ -53,6 +53,10 @@
   padding: 0;
 }
 
+.national-grid-frontend .national-grid-frontend-clean-power-value {
+  font-weight: 700;
+}
+
 .national-grid-frontend-wrapper {
   padding: 30px 15px;
 }

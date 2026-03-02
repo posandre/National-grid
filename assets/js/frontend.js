@@ -449,7 +449,10 @@
     }, 0);
 
     var percentage = total > 0 ? (cleanTotal / total) * 100 : 0;
-    headingNode.textContent = "Live Percentage Clean Power: " + percentage.toFixed(1) + "%";
+    headingNode.innerHTML =
+      'Live Percentage Clean Power: <span class="national-grid-frontend-clean-power-value">' +
+      percentage.toFixed(1) +
+      "%</span>";
   }
 
   // Creates the live generation pie chart instance.
