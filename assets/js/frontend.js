@@ -94,7 +94,7 @@
         }
 
         var percent = (value / total) * 100;
-        if (percent < 3) {
+        if ( percent < 5 ) {
           return;
         }
 
