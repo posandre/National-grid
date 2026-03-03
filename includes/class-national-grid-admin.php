@@ -855,16 +855,17 @@ class National_Grid_Admin {
         if ( 'settings_page_' . self::PAGE_SLUG !== $hook ) {
             return;
         }
+        $asset_suffix = self::get_asset_suffix();
 
         wp_enqueue_style(
             'national-grid-admin',
-            NATIONAL_GRID_PLUGIN_URL . 'assets/css/admin.css',
+            NATIONAL_GRID_PLUGIN_URL . 'assets/css/admin' . $asset_suffix . '.css',
             [],
             NATIONAL_GRID_VERSION
         );
         wp_enqueue_script(
             'national-grid-admin',
-            NATIONAL_GRID_PLUGIN_URL . 'assets/js/admin.js',
+            NATIONAL_GRID_PLUGIN_URL . 'assets/js/admin' . $asset_suffix . '.js',
             [ 'jquery' ],
             NATIONAL_GRID_VERSION,
             true
@@ -880,6 +881,18 @@ class National_Grid_Admin {
                 'unknownError' => __( 'Unexpected error. Please try again.', 'national-grid' ),
             ]
         );
+    }
+
+    /**
+     * Returns admin asset suffix based on debug flags.
+     *
+     * @return string
+     */
+    private static function get_asset_suffix() {
+        $is_debug = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG )
+            || ( defined( 'WP_DEBUG' ) && WP_DEBUG );
+
+        return $is_debug ? '' : '.min';
     }
 
     /**

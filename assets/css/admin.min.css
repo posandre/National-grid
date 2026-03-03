@@ -1,0 +1,186 @@
+.national-grid-admin-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+}
+
+.national-grid-admin-divider {
+    width: 100%;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid #dcdcde;
+}
+
+.national-grid-admin-update-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.national-grid-admin-loader {
+    float: none;
+    margin: 0;
+}
+
+.national-grid-admin-message {
+    margin-top: 10px;
+}
+
+.national-grid-admin-update-note {
+    margin-top: 12px;
+}
+
+.national-grid-admin-log-section {
+    margin-top: 24px;
+}
+
+.national-grid-admin-log-clear-form {
+    margin-bottom: 12px;
+}
+
+.national-grid-admin-log-table td {
+    vertical-align: top;
+}
+
+.national-grid-admin-log-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.national-grid-admin-log-col-time {
+    width: 170px;
+}
+
+.national-grid-admin-log-col-source {
+    width: 140px;
+}
+
+.national-grid-admin-log-col-status {
+    width: 130px;
+}
+
+.national-grid-admin-log-col-message {
+    width: auto;
+}
+
+.national-grid-admin-log-th-time,
+.national-grid-admin-log-td-time {
+    white-space: nowrap;
+}
+
+.national-grid-admin-log-th-source,
+.national-grid-admin-log-td-source,
+.national-grid-admin-log-th-status,
+.national-grid-admin-log-td-status {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.national-grid-admin-log-th-message,
+.national-grid-admin-log-td-message {
+    width: auto;
+}
+
+.national-grid-admin-log-td-message {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.national-grid-admin-log-td-message details {
+    margin-top: 6px;
+}
+
+.national-grid-admin-log-td-message pre {
+    margin: 8px 0 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.national-grid-log-row-error {
+    background-color: #ffe9e9 !important;
+}
+
+.national-grid-log-row-success {
+    background-color: #f6fff7 !important;
+}
+
+.national-grid-admin-log-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.national-grid-admin-log-pagination-summary {
+    margin: 0;
+    color: #50575e;
+    font-size: 13px;
+}
+
+.national-grid-admin-log-pagination-links {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.national-grid-admin-log-pagination-links .page-numbers {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    background: #fff;
+    color: #1d2327;
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.national-grid-admin-log-pagination-links .page-numbers:hover,
+.national-grid-admin-log-pagination-links .page-numbers:focus {
+    border-color: #2271b1;
+    color: #2271b1;
+}
+
+.national-grid-admin-log-pagination-links .page-numbers.current {
+    border-color: #2271b1;
+    background: #2271b1;
+    color: #fff;
+    font-weight: 600;
+}
+
+.national-grid-admin-debug-log {
+    max-height: 70vh;
+    overflow: auto;
+    padding: 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.national-grid-admin-debug-clear-form {
+    margin: 10px 0 14px;
+}
+
+@media (max-width: 782px) {
+    .national-grid-admin-log-pagination {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

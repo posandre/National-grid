@@ -108,10 +108,11 @@ class National_Grid_Frontend {
         if ( ! self::should_enqueue_assets() ) {
             return;
         }
+        $asset_suffix = self::get_asset_suffix();
 
         wp_enqueue_style(
             'national-grid-frontend',
-            NATIONAL_GRID_PLUGIN_URL . 'assets/css/frontend.css',
+            NATIONAL_GRID_PLUGIN_URL . 'assets/css/frontend' . $asset_suffix . '.css',
             [],
             NATIONAL_GRID_VERSION
         );
@@ -126,7 +127,7 @@ class National_Grid_Frontend {
 
         wp_enqueue_script(
             'national-grid-frontend',
-            NATIONAL_GRID_PLUGIN_URL . 'assets/js/frontend.js',
+            NATIONAL_GRID_PLUGIN_URL . 'assets/js/frontend' . $asset_suffix . '.js',
             [ 'national-grid-chart-js' ],
             NATIONAL_GRID_VERSION,
             true
@@ -231,6 +232,18 @@ class National_Grid_Frontend {
         self::$chart_data_request_cache = DatabaseStorage::getFrontendChartData();
 
         return self::$chart_data_request_cache;
+    }
+
+    /**
+     * Returns frontend asset suffix based on debug flags.
+     *
+     * @return string
+     */
+    private static function get_asset_suffix() {
+        $is_debug = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG )
+            || ( defined( 'WP_DEBUG' ) && WP_DEBUG );
+
+        return $is_debug ? '' : '.min';
     }
 
     /**
