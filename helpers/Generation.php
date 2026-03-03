@@ -67,10 +67,26 @@ class Generation {
       gmdate('Y-m-d\\TH:i:s\\Z', time() - 24 * 60 * 60),
       gmdate('Y-m-d\\TH:i:s\\Z')
     );
-    $rawData = @file_get_contents( $generation_api_url );
+    $response = wp_remote_get(
+      $generation_api_url,
+      [
+        'timeout' => 20,
+        'redirection' => 3,
+      ]
+    );
 
-    if ($rawData === false) {
-        throw new DataException( 'Generation data: Failed to read generatiob data from data.elexon.co.uk.' );
+    if ( is_wp_error( $response ) ) {
+      throw new DataException( 'Generation data: Failed to read data from data.elexon.co.uk. ' . $response->get_error_message() );
+    }
+
+    $status_code = (int) wp_remote_retrieve_response_code( $response );
+    if ( $status_code < 200 || $status_code >= 300 ) {
+      throw new DataException( 'Generation data: API returned HTTP ' . $status_code . ' from data.elexon.co.uk.' );
+    }
+
+    $rawData = (string) wp_remote_retrieve_body( $response );
+    if ( '' === trim( $rawData ) ) {
+      throw new DataException( 'Generation data: Empty API response from data.elexon.co.uk.' );
     }
 
     $jsonData = json_decode($rawData, true);

@@ -3,7 +3,7 @@
  * Plugin Name: National Grid
  * Description: National Grid plugin with options page and shortcode.
  * Version: 1.0.0
- * Author: Your Name
+ * Author: Andrii Postoliuk (Inoxoft)
  * Text Domain: national-grid
  */
 
@@ -186,10 +186,68 @@ register_activation_hook( __FILE__, 'national_grid_activate' );
  * @return void
  */
 function national_grid_bootstrap() {
+    load_plugin_textdomain( 'national-grid', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
     National_Grid_Admin::init();
     National_Grid_Frontend::init();
 }
 add_action( 'plugins_loaded', 'national_grid_bootstrap' );
+
+/**
+ * Unschedules plugin cron events on deactivation.
+ *
+ * @return void
+ */
+function national_grid_deactivate() {
+    National_Grid_Admin::clear_scheduled_events();
+}
+register_deactivation_hook( __FILE__, 'national_grid_deactivate' );
+
+/**
+ * Removes plugin data from database and filesystem on uninstall.
+ *
+ * @return void
+ */
+function national_grid_uninstall() {
+    if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+        return;
+    }
+
+    global $wpdb;
+
+    National_Grid_Admin::clear_scheduled_events();
+
+    $options = [
+        NATIONAL_GRID_OPTION_TIMEOUT,
+        NATIONAL_GRID_OPTION_MODULE_TITLE,
+        NATIONAL_GRID_OPTION_MODULE_DESCRIPTION,
+        NATIONAL_GRID_OPTION_AUTO_UPDATE,
+        NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG,
+        NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS,
+        NATIONAL_GRID_OPTION_ENABLE_LOG,
+        NATIONAL_GRID_OPTION_CHART_ANIMATION,
+        NATIONAL_GRID_OPTION_DEBUG_MODE,
+    ];
+    foreach ( $options as $option_name ) {
+        delete_option( $option_name );
+    }
+
+    DatabaseStorage::invalidateFrontendChartCache();
+
+    $tables = [
+        $wpdb->prefix . 'national_grid_past_five_minutes',
+        $wpdb->prefix . 'national_grid_past_half_hours',
+        $wpdb->prefix . 'national_grid_logs',
+    ];
+    foreach ( $tables as $table_name ) {
+        $wpdb->query( 'DROP TABLE IF EXISTS `' . esc_sql( $table_name ) . '`' );
+    }
+
+    $debug_path = DatabaseStorage::getDebugLogPathForAdmin();
+    if ( is_string( $debug_path ) && '' !== $debug_path && file_exists( $debug_path ) ) {
+        wp_delete_file( $debug_path );
+    }
+}
+register_uninstall_hook( __FILE__, 'national_grid_uninstall' );
 
 /**
  * Adds quick "Info" link on the Plugins page for this plugin.

@@ -541,6 +541,25 @@ class National_Grid_Admin {
     }
 
     /**
+     * Unschedules all plugin cron events.
+     *
+     * @return void
+     */
+    public static function clear_scheduled_events(): void {
+        $timestamp = wp_next_scheduled( self::CRON_HOOK );
+        while ( false !== $timestamp ) {
+            wp_unschedule_event( $timestamp, self::CRON_HOOK );
+            $timestamp = wp_next_scheduled( self::CRON_HOOK );
+        }
+
+        $timestamp = wp_next_scheduled( self::LOG_CLEAR_CRON_HOOK );
+        while ( false !== $timestamp ) {
+            wp_unschedule_event( $timestamp, self::LOG_CLEAR_CRON_HOOK );
+            $timestamp = wp_next_scheduled( self::LOG_CLEAR_CRON_HOOK );
+        }
+    }
+
+    /**
      * Runs scheduled data update.
      *
      * @return void
