@@ -65,6 +65,25 @@ class Demand {
       }
     }
 
+    if ( DatabaseStorage::isDebugModeEnabled() ) {
+      $demand_lines = [];
+      $field_order = array_merge( [ 'time' ], self::KEYS );
+      foreach ( $validData as $point_row ) {
+        $time_label = ( is_array( $point_row ) && isset( $point_row[0] ) ) ? (string) $point_row[0] : 'unknown-time';
+        $demand_lines[] = $time_label . ': ' . wp_json_encode( array_values( (array) $point_row ), JSON_UNESCAPED_SLASHES );
+      }
+
+      DatabaseStorage::appendDebugLog(
+        'Data written to DB (demand)',
+        [
+          'Prepared demand rows count: ' . count( $validData ),
+          'Field order: ' . wp_json_encode( $field_order, JSON_UNESCAPED_SLASHES ),
+          'Demand rows payload:',
+          ...$demand_lines,
+        ]
+      );
+    }
+
     $update_result = DatabaseStorage::updateDemand($validData);
     $is_success = is_array($update_result) && isset($update_result['rows_written'], $update_result['rows_deleted']);
 

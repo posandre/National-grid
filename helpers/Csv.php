@@ -20,12 +20,12 @@ class Csv {
   ): array {
     $file = @fopen($url, 'r');
     if (!$file) {
-      throw new DataException('CSV: Failed to read data (file' . $url . ')');
+      throw new DataException('CSV: Failed to read data (file: ' . $url . ')');
     }
 
     $row = fgetcsv($file);
     if (!$row) {
-      throw new DataException('CSV Missing CSV headers (file' . $url . ')');
+      throw new DataException('CSV Missing CSV headers (file: ' . $url . ')');
     }
 
     foreach ($row as $header) {
@@ -33,7 +33,7 @@ class Csv {
         !in_array($header, $requiredHeaders, true)
         && !in_array($header, $ignoredHeaders, true)
       ) {
-        throw new DataException('CSV: Unrecognised header: ' . $header. ' (file' . $url . ')');
+        throw new DataException('CSV: Unrecognised header: ' . $header . ' (file: ' . $url . ')');
       }
     }
 
@@ -45,14 +45,14 @@ class Csv {
     );
 
     if (in_array(false, $columns, true)) {
-      throw new DataException('CSV: Missing required header (file' . $url . ')');
+      throw new DataException('CSV: Missing required header (file: ' . $url . ')');
     }
 
     $data = [];
 
     while ($row = fgetcsv($file)) {
       if (count($row) !== $columnCount) {
-        throw new DataException('CSV: Column count does not match header count (file' . $url . ')');
+        throw new DataException('CSV: Column count does not match header count (file: ' . $url . ')');
       }
 
       $data[] = array_map(fn ($column) => $row[$column], $columns);

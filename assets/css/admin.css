@@ -162,6 +162,22 @@
     font-weight: 600;
 }
 
+.national-grid-admin-debug-log {
+    max-height: 70vh;
+    overflow: auto;
+    padding: 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.national-grid-admin-debug-clear-form {
+    margin: 10px 0 14px;
+}
+
 @media (max-width: 782px) {
     .national-grid-admin-log-pagination {
         flex-direction: column;

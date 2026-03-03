@@ -13,6 +13,8 @@ class National_Grid_Admin {
     private const FETCH_LOG_ACTION = 'national_grid_fetch_log_section';
     /** Action name for clearing stored logs. */
     private const CLEAR_LOG_ACTION = 'national_grid_clear_log';
+    /** Action name for clearing debug log file. */
+    private const CLEAR_DEBUG_LOG_ACTION = 'national_grid_clear_debug_log';
     /** Cron hook name for scheduled data updates. */
     private const CRON_HOOK = 'national_grid_cron_update_data';
     /** Custom cron schedule key based on configured timeout. */
@@ -37,6 +39,7 @@ class National_Grid_Admin {
         add_action( 'wp_ajax_' . self::FETCH_LOG_ACTION, [ __CLASS__, 'handle_fetch_log_section_ajax' ] );
 
         add_action( 'admin_post_' . self::CLEAR_LOG_ACTION, [ __CLASS__, 'handle_clear_log' ] );
+        add_action( 'admin_post_' . self::CLEAR_DEBUG_LOG_ACTION, [ __CLASS__, 'handle_clear_debug_log' ] );
 
         add_filter( 'cron_schedules', [ __CLASS__, 'add_cron_schedule' ] );
         add_action( 'init', [ __CLASS__, 'maybe_sync_cron_event' ] );
@@ -108,6 +111,16 @@ class National_Grid_Admin {
 
         register_setting(
             'national_grid_settings',
+            NATIONAL_GRID_OPTION_DEBUG_MODE,
+            [
+                'type' => 'boolean',
+                'sanitize_callback' => [ __CLASS__, 'sanitize_debug_mode' ],
+                'default' => 0,
+            ]
+        );
+
+        register_setting(
+            'national_grid_settings',
             NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG,
             [
                 'type' => 'boolean',
@@ -135,7 +148,7 @@ class National_Grid_Admin {
 
         add_settings_field(
             NATIONAL_GRID_OPTION_TIMEOUT,
-            __( 'National grid timeout', 'national-grid' ),
+            __( 'National Grid Data Update Timed Out', 'national-grid' ),
             [ __CLASS__, 'render_timeout_field' ],
             self::PAGE_SLUG,
             'national_grid_main'
@@ -145,6 +158,14 @@ class National_Grid_Admin {
             NATIONAL_GRID_OPTION_AUTO_UPDATE,
             __( 'Automatic cron update', 'national-grid' ),
             [ __CLASS__, 'render_auto_update_field' ],
+            self::PAGE_SLUG,
+            'national_grid_main'
+        );
+
+        add_settings_field(
+            NATIONAL_GRID_OPTION_DEBUG_MODE,
+            __( 'Debug mode', 'national-grid' ),
+            [ __CLASS__, 'render_debug_mode_field' ],
             self::PAGE_SLUG,
             'national_grid_main'
         );
@@ -209,6 +230,16 @@ class National_Grid_Admin {
     }
 
     /**
+     * Normalizes debug mode toggle to 1 or 0.
+     *
+     * @param mixed $value Raw debug mode option value.
+     * @return int
+     */
+    public static function sanitize_debug_mode( $value ) {
+        return ! empty( $value ) ? 1 : 0;
+    }
+
+    /**
      * Normalizes automatic log cleanup toggle to 1 or 0.
      *
      * @param mixed $value Raw automatic log cleanup option value.
@@ -261,6 +292,21 @@ class National_Grid_Admin {
             esc_attr( NATIONAL_GRID_OPTION_AUTO_UPDATE ),
             checked( 1, $value, false ),
             esc_html__( 'Enable automatic updates by cron', 'national-grid' )
+        );
+    }
+
+    /**
+     * Renders debug mode checkbox field.
+     *
+     * @return void
+     */
+    public static function render_debug_mode_field() {
+        $value = (int) get_option( NATIONAL_GRID_OPTION_DEBUG_MODE, 0 );
+        printf(
+            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s /> %3$s</label>',
+            esc_attr( NATIONAL_GRID_OPTION_DEBUG_MODE ),
+            checked( 1, $value, false ),
+            esc_html__( 'Enable debug logging to file for update calculations', 'national-grid' )
         );
     }
 
@@ -407,8 +453,13 @@ class National_Grid_Admin {
      */
     public static function handle_cron_clear_log() {
         $result = DatabaseStorage::clearLogs();
+        $debug_result = DatabaseStorage::clearDebugLogFile();
         if ( false === $result ) {
             DatabaseStorage::logError( 'cron', 'Automatic log cleanup failed.' );
+            return;
+        }
+        if ( ! $debug_result ) {
+            DatabaseStorage::logError( 'cron', 'Automatic debug log cleanup failed.' );
             return;
         }
 
@@ -417,6 +468,7 @@ class National_Grid_Admin {
             'Automatic log cleanup completed.',
             [
                 'rows_deleted' => (int) $result,
+                'debug_log_cleared' => true,
             ]
         );
     }
@@ -464,6 +516,21 @@ class National_Grid_Admin {
                     'demand' => $demand_update_result,
                 ]
             );
+
+            if ( DatabaseStorage::isDebugModeEnabled() ) {
+                DatabaseStorage::appendDebugLog(
+                    'Update cycle summary',
+                    [
+                        'Timestamp: ' . gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+                        'Source: ' . $source,
+                        'Generation update result:',
+                        wp_json_encode( $generation_update_result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ),
+                        'Demand update result:',
+                        wp_json_encode( $demand_update_result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ),
+                    ]
+                );
+                DatabaseStorage::logChartComputationDebug();
+            }
 
             return [
                 'success' => true,
@@ -618,6 +685,23 @@ class National_Grid_Admin {
         DatabaseStorage::clearLogs();
 
         wp_safe_redirect( admin_url( 'options-general.php?page=' . self::PAGE_SLUG . '&tab=logs&national_grid_log_cleared=1' ) );
+        exit;
+    }
+
+    /**
+     * Clears debug log file.
+     *
+     * @return void
+     */
+    public static function handle_clear_debug_log() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to do that.', 'national-grid' ) );
+        }
+
+        check_admin_referer( self::CLEAR_DEBUG_LOG_ACTION, 'national_grid_clear_debug_log_nonce' );
+        DatabaseStorage::clearDebugLogFile();
+
+        wp_safe_redirect( admin_url( 'options-general.php?page=' . self::PAGE_SLUG . '&tab=debug&national_grid_debug_log_cleared=1' ) );
         exit;
     }
 
@@ -924,6 +1008,46 @@ class National_Grid_Admin {
     }
 
     /**
+     * Renders debug log file content.
+     *
+     * @return void
+     */
+    private static function render_debug_section() {
+        $path = DatabaseStorage::getDebugLogPathForAdmin();
+
+        echo '<div class="national-grid-admin-debug-section">';
+        echo '<h2>' . esc_html__( 'Debug log', 'national-grid' ) . '</h2>';
+        echo '<p><strong>' . esc_html__( 'File:', 'national-grid' ) . '</strong> <code>' . esc_html( $path ) . '</code></p>';
+        echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="national-grid-admin-debug-clear-form">';
+        wp_nonce_field( self::CLEAR_DEBUG_LOG_ACTION, 'national_grid_clear_debug_log_nonce' );
+        echo '<input type="hidden" name="action" value="' . esc_attr( self::CLEAR_DEBUG_LOG_ACTION ) . '" />';
+        submit_button( __( 'Clear debug log', 'national-grid' ), 'delete', 'submit', false );
+        echo '</form>';
+
+        if ( ! file_exists( $path ) ) {
+            echo '<p>' . esc_html__( 'Debug log file does not exist yet. Run an update with Debug mode enabled.', 'national-grid' ) . '</p>';
+            echo '</div>';
+            return;
+        }
+
+        if ( ! is_readable( $path ) ) {
+            echo '<p>' . esc_html__( 'Debug log file is not readable.', 'national-grid' ) . '</p>';
+            echo '</div>';
+            return;
+        }
+
+        $content = (string) file_get_contents( $path );
+        if ( '' === trim( $content ) ) {
+            echo '<p>' . esc_html__( 'Debug log file is empty.', 'national-grid' ) . '</p>';
+            echo '</div>';
+            return;
+        }
+
+        echo '<pre class="national-grid-admin-debug-log">' . esc_html( $content ) . '</pre>';
+        echo '</div>';
+    }
+
+    /**
      * Renders the plugin settings page.
      *
      * @return void
@@ -933,10 +1057,14 @@ class National_Grid_Admin {
             return;
         }
 
+        $debug_mode_enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_DEBUG_MODE, 0 );
         $active_tab = isset( $_GET['tab'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             ? sanitize_key( (string) wp_unslash( $_GET['tab'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             : 'settings';
-        if ( ! in_array( $active_tab, [ 'settings', 'update', 'logs', 'info' ], true ) ) {
+        if ( ! in_array( $active_tab, [ 'settings', 'update', 'logs', 'info', 'debug' ], true ) ) {
+            $active_tab = 'settings';
+        }
+        if ( 'debug' === $active_tab && ! $debug_mode_enabled ) {
             $active_tab = 'settings';
         }
 
@@ -968,6 +1096,13 @@ class National_Grid_Admin {
             ],
             admin_url( 'options-general.php' )
         );
+        $debug_tab_url = add_query_arg(
+            [
+                'page' => self::PAGE_SLUG,
+                'tab' => 'debug',
+            ],
+            admin_url( 'options-general.php' )
+        );
 
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__( 'National Grid', 'national-grid' ) . '</h1>';
@@ -976,10 +1111,16 @@ class National_Grid_Admin {
         echo '<a href="' . esc_url( $update_tab_url ) . '" class="nav-tab ' . esc_attr( 'update' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Update data', 'national-grid' ) . '</a>';
         echo '<a href="' . esc_url( $logs_tab_url ) . '" class="nav-tab ' . esc_attr( 'logs' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Log', 'national-grid' ) . '</a>';
         echo '<a href="' . esc_url( $info_tab_url ) . '" class="nav-tab ' . esc_attr( 'info' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Info', 'national-grid' ) . '</a>';
+        if ( $debug_mode_enabled ) {
+            echo '<a href="' . esc_url( $debug_tab_url ) . '" class="nav-tab ' . esc_attr( 'debug' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Debug', 'national-grid' ) . '</a>';
+        }
         echo '</nav>';
 
         if ( isset( $_GET['national_grid_log_cleared'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Log cleared.', 'national-grid' ) . '</p></div>';
+        }
+        if ( isset( $_GET['national_grid_debug_log_cleared'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Debug log cleared.', 'national-grid' ) . '</p></div>';
         }
 
         if ( 'settings' === $active_tab ) {
@@ -1011,6 +1152,10 @@ class National_Grid_Admin {
 
         if ( 'info' === $active_tab ) {
             self::render_info_section();
+        }
+
+        if ( 'debug' === $active_tab && $debug_mode_enabled ) {
+            self::render_debug_section();
         }
 
         echo '</div>';

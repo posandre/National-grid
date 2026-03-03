@@ -97,6 +97,24 @@ class Generation {
       $data[$time][self::getColumn($item)] = self::getGeneration($item);
     }
 
+      if ( DatabaseStorage::isDebugModeEnabled() ) {
+          $generation_lines = [];
+          $field_order = array_merge( [ 'time' ], self::KEYS );
+          foreach ( $data as $point_time => $point_row ) {
+              $generation_lines[] = (string) $point_time . ': ' . wp_json_encode( array_values( (array) $point_row ), JSON_UNESCAPED_SLASHES );
+          }
+
+          DatabaseStorage::appendDebugLog(
+              'Data written to DB (generation)',
+              [
+                  'Prepared generation rows count: ' . count( $data ),
+                  'Field order: ' . wp_json_encode( $field_order, JSON_UNESCAPED_SLASHES ),
+                  'Generation rows payload:',
+                  ...$generation_lines,
+              ]
+          );
+      }
+
       return DatabaseStorage::updateGeneration( $data );
   }
 

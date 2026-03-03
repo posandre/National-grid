@@ -30,6 +30,8 @@ define( 'NATIONAL_GRID_OPTION_AUTO_UPDATE', 'national_grid_auto_update' );
 define( 'NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG', 'national_grid_auto_clear_log' );
 // Option name for automatic plugin log cleanup interval (in hours).
 define( 'NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS', 'national_grid_log_clear_interval_hours' );
+// Option name for debug mode toggle.
+define( 'NATIONAL_GRID_OPTION_DEBUG_MODE', 'national_grid_debug_mode' );
 
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/DataException.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Time.php';
@@ -156,6 +158,10 @@ function national_grid_activate() {
 
     if ( false === get_option( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS, false ) ) {
         add_option( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS, 336 );
+    }
+
+    if ( false === get_option( NATIONAL_GRID_OPTION_DEBUG_MODE, false ) ) {
+        add_option( NATIONAL_GRID_OPTION_DEBUG_MODE, 0 );
     }
 
     national_grid_create_tables();

@@ -9,6 +9,8 @@ class DatabaseStorage {
     private const STATUS_SUCCESS = 'success';
     /** Log status value for failed events. */
     private const STATUS_ERROR = 'error';
+    /** Debug log filename in uploads directory. */
+    private const DEBUG_LOG_FILENAME = 'national-grid-debug.log';
     /** Maps frontend pie labels to storage columns used for aggregation. */
     private const FRONTEND_PIE_MAPPING = [
         'Gas' => [
@@ -152,6 +154,97 @@ class DatabaseStorage {
 
         $table_name = self::getLogsTableName();
         return $wpdb->query( 'DELETE FROM `' . esc_sql( $table_name ) . '`' );
+    }
+
+    /**
+     * Returns true when debug mode is enabled in plugin settings.
+     *
+     * @return bool
+     */
+    public static function isDebugModeEnabled(): bool {
+        return 1 === (int) get_option( NATIONAL_GRID_OPTION_DEBUG_MODE, 0 );
+    }
+
+    /**
+     * Appends formatted debug entry to plugin debug log file.
+     *
+     * @param string $title Debug block title.
+     * @param array<int, string> $lines Debug lines.
+     * @return void
+     */
+    public static function appendDebugLog( string $title, array $lines ): void {
+        if ( ! self::isDebugModeEnabled() ) {
+            return;
+        }
+
+        $path = self::getDebugLogPath();
+        $timestamp = gmdate( 'Y-m-d H:i:s' ) . ' UTC';
+        $safe_lines = array_map(
+            static function ( $line ) {
+                return (string) $line;
+            },
+            $lines
+        );
+        $safe_lines = self::normalizeDebugLines( $safe_lines );
+
+        $content = "\n=== {$timestamp} | {$title} ===\n" . implode( "\n", $safe_lines ) . "\n";
+        error_log( $content, 3, $path );
+    }
+
+    /**
+     * Returns filesystem path for plugin debug log file.
+     *
+     * @return string
+     */
+    private static function getDebugLogPath(): string {
+        $upload = wp_upload_dir();
+        if ( isset( $upload['basedir'] ) && is_string( $upload['basedir'] ) && '' !== $upload['basedir'] ) {
+            return trailingslashit( $upload['basedir'] ) . self::DEBUG_LOG_FILENAME;
+        }
+
+        return trailingslashit( NATIONAL_GRID_PLUGIN_DIR ) . self::DEBUG_LOG_FILENAME;
+    }
+
+    /**
+     * Returns filesystem path for plugin debug log file (for admin UI).
+     *
+     * @return string
+     */
+    public static function getDebugLogPathForAdmin(): string {
+        return self::getDebugLogPath();
+    }
+
+    /**
+     * Clears plugin debug log file.
+     *
+     * @return bool
+     */
+    public static function clearDebugLogFile(): bool {
+        $path = self::getDebugLogPath();
+        if ( ! file_exists( $path ) ) {
+            return true;
+        }
+
+        return false !== file_put_contents( $path, '' );
+    }
+
+    /**
+     * Formats debug lines to improve readability in file output.
+     *
+     * @param array<int, string> $lines Raw lines.
+     * @return array<int, string>
+     */
+    private static function normalizeDebugLines( array $lines ): array {
+        $normalized = [];
+
+        foreach ( $lines as $line ) {
+            $chunks = explode( "\n", (string) $line );
+            foreach ( $chunks as $chunk ) {
+                $normalized[] = $chunk;
+            }
+        }
+
+        return $normalized;
     }
 
     /**
@@ -783,14 +876,18 @@ class DatabaseStorage {
      * @param array<string, mixed> $latest_half_hour Latest half-hour row.
      * @return array<string, float>
      */
-    private static function buildFrontendPieData( array $latest_five_minutes, array $latest_half_hour ) {
+    private static function buildFrontendPieData( array $latest_five_minutes, array $latest_half_hour, bool $log_debug = false ) {
         $pie = [];
+        $formula_lines = [];
 
         foreach ( self::FRONTEND_PIE_MAPPING as $label => $sources ) {
             $value = 0.0;
+            $parts = [];
             foreach ( $sources as $source_key ) {
                 if ( in_array( $source_key, [ 'embedded_wind', 'embedded_solar' ], true ) ) {
-                    $value += self::getNumericFromRow( $latest_half_hour, $source_key );
+                    $source_value = self::getNumericFromRow( $latest_half_hour, $source_key );
+                    $value += $source_value;
+                    $parts[] = $source_key . '(' . number_format( $source_value, 2, '.', '' ) . ' GW)';
                     continue;
                 }
 
@@ -800,6 +897,7 @@ class DatabaseStorage {
                 }
 
                 $value += $source_value;
+                $parts[] = $source_key . '(' . number_format( $source_value, 2, '.', '' ) . ' GW)';
             }
 
             if ( 'Interconnectors' === $label && $value < 0 ) {
@@ -807,6 +905,45 @@ class DatabaseStorage {
             }
 
             $pie[ $label ] = $value;
+            $formula_lines[] = $label . ' = ' . implode( ' + ', $parts ) . ' = ' . number_format( $value, 2, '.', '' ) . ' GW';
+        }
+
+        $total_generation = array_sum( $pie );
+        $clean_power = 0.0;
+        foreach ( [ 'Wind', 'Solar', 'Hydroelectric', 'Biomass', 'Nuclear' ] as $clean_label ) {
+            $clean_power += isset( $pie[ $clean_label ] ) ? (float) $pie[ $clean_label ] : 0.0;
+        }
+        $clean_power_percent = $total_generation > 0 ? ( $clean_power / $total_generation ) * 100 : 0.0;
+        $clean_power_formula = sprintf(
+            'Wind(%1$s GW) + Solar(%2$s GW) + Hydroelectric(%3$s GW) + Biomass(%4$s GW) + Nuclear(%5$s GW)',
+            number_format( isset( $pie['Wind'] ) ? (float) $pie['Wind'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Solar'] ) ? (float) $pie['Solar'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Hydroelectric'] ) ? (float) $pie['Hydroelectric'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Biomass'] ) ? (float) $pie['Biomass'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Nuclear'] ) ? (float) $pie['Nuclear'] : 0.0, 2, '.', '' )
+        );
+
+        if ( $log_debug && self::isDebugModeEnabled() ) {
+            self::appendDebugLog(
+                'Chart calculations',
+                [
+                    'DB selection (latest five minutes):',
+                    wp_json_encode( $latest_five_minutes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ),
+                    'DB selection (latest half hour):',
+                    wp_json_encode( $latest_half_hour, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ),
+                    'Computed pie values:',
+                    ...$formula_lines,
+                    'Total generation = ' . number_format( $total_generation, 2, '.', '' ) . ' GW',
+                    'Clean Power = ' . $clean_power_formula . ' = ' . number_format( $clean_power, 2, '.', '' ) . ' GW',
+                    sprintf(
+                        'Clean Power share = (Clean Power(%1$s GW) / Total generation(%2$s GW)) * 100 = %3$s%%',
+                        number_format( $clean_power, 2, '.', '' ),
+                        number_format( $total_generation, 2, '.', '' ),
+                        number_format( $clean_power_percent, 1, '.', '' )
+                    ),
+                    str_repeat( '-', 120 ),
+                ]
+            );
         }
 
         return $pie;
@@ -852,5 +989,20 @@ class DatabaseStorage {
             'latest_half_hour' => $latest_half_hour,
             'pie' => $pie
         ];
+    }
+
+    /**
+     * Logs chart input and formula output for debugging.
+     *
+     * @return void
+     */
+    public static function logChartComputationDebug(): void {
+        if ( ! self::isDebugModeEnabled() ) {
+            return;
+        }
+
+        $latest_five_minutes = self::getLatestFiveMinuteGeneration();
+        $latest_half_hour = self::getLatestHalfHourRow();
+        self::buildFrontendPieData( $latest_five_minutes, $latest_half_hour, true );
     }
 }
