@@ -656,16 +656,6 @@ class DatabaseStorage {
             }
         }
 
-//        error_log(
-//            sprintf(
-//                '[National Grid] getLatestHalfHour result=%s source=%s table_max=%s current_half_hour=%s',
-//                $latest_half_hour,
-//                $source,
-//                is_string( $latest_from_table ) && '' !== $latest_from_table ? $latest_from_table : 'null',
-//                $current_half_hour
-//            )
-//        );
-
         return $latest_half_hour;
     }
 
