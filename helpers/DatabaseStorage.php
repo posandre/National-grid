@@ -235,13 +235,36 @@ class DatabaseStorage {
      * @return array<int, string>
      */
     private static function normalizeDebugLines( array $lines ): array {
-        $normalized = [];
-
+        $flattened = [];
         foreach ( $lines as $line ) {
             $chunks = explode( "\n", (string) $line );
             foreach ( $chunks as $chunk ) {
-                $normalized[] = $chunk;
+                $flattened[] = rtrim( (string) $chunk );
             }
+        }
+
+        $normalized = [];
+        foreach ( $flattened as $chunk ) {
+            $is_empty = '' === trim( $chunk );
+            $is_section_heading = (bool) preg_match( '/:\s*$/', $chunk );
+
+            if ( $is_empty ) {
+                if ( [] === $normalized || '' === end( $normalized ) ) {
+                    continue;
+                }
+                $normalized[] = '';
+                continue;
+            }
+
+            if ( $is_section_heading && [] !== $normalized && '' !== end( $normalized ) ) {
+                $normalized[] = '';
+            }
+
+            $normalized[] = $chunk;
+        }
+
+        while ( [] !== $normalized && '' === end( $normalized ) ) {
+            array_pop( $normalized );
         }
 
         return $normalized;
@@ -922,6 +945,59 @@ class DatabaseStorage {
             number_format( isset( $pie['Biomass'] ) ? (float) $pie['Biomass'] : 0.0, 2, '.', '' ),
             number_format( isset( $pie['Nuclear'] ) ? (float) $pie['Nuclear'] : 0.0, 2, '.', '' )
         );
+        $get_generation_value = static function ( string $key ) use ( $latest_five_minutes ): float {
+            if ( ! isset( $latest_five_minutes[ $key ] ) || ! is_numeric( $latest_five_minutes[ $key ] ) ) {
+                return 0.0;
+            }
+
+            return (float) $latest_five_minutes[ $key ];
+        };
+        $interconnector_by_country = [
+            'France' => [
+                'ifa' => $get_generation_value( 'ifa' ),
+                'ifa2' => $get_generation_value( 'ifa2' ),
+                'eleclink' => $get_generation_value( 'eleclink' ),
+            ],
+            'Ireland' => [
+                'moyle' => $get_generation_value( 'moyle' ),
+                'ewic' => $get_generation_value( 'ewic' ),
+                'greenlink' => $get_generation_value( 'greenlink' ),
+            ],
+            'Netherlands' => [
+                'britned' => $get_generation_value( 'britned' ),
+            ],
+            'Belgium' => [
+                'nemo' => $get_generation_value( 'nemo' ),
+            ],
+            'Norway' => [
+                'nsl' => $get_generation_value( 'nsl' ),
+            ],
+            'Denmark' => [
+                'viking' => $get_generation_value( 'viking' ),
+            ],
+        ];
+        $interconnector_country_lines = [];
+        foreach ( $interconnector_by_country as $country => $components ) {
+            $parts = [];
+            $country_total = 0.0;
+            foreach ( $components as $component_key => $component_value ) {
+                $country_total += (float) $component_value;
+                $parts[] = $component_key . '(' . number_format( (float) $component_value, 2, '.', '' ) . ' GW)';
+            }
+
+            $interconnector_country_lines[] = $country . ' = ' . implode( ' + ', $parts ) . ' = ' . number_format( $country_total, 2, '.', '' ) . ' GW';
+        }
+        $total_generation_formula = sprintf(
+            'Storage(%1$s GW) + Interconnectors(%2$s GW) + Biomass(%3$s GW) + Nuclear(%4$s GW) + Hydroelectric(%5$s GW) + Solar(%6$s GW) + Wind(%7$s GW) + Gas(%8$s GW)',
+            number_format( isset( $pie['Storage'] ) ? (float) $pie['Storage'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Interconnectors'] ) ? (float) $pie['Interconnectors'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Biomass'] ) ? (float) $pie['Biomass'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Nuclear'] ) ? (float) $pie['Nuclear'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Hydroelectric'] ) ? (float) $pie['Hydroelectric'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Solar'] ) ? (float) $pie['Solar'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Wind'] ) ? (float) $pie['Wind'] : 0.0, 2, '.', '' ),
+            number_format( isset( $pie['Gas'] ) ? (float) $pie['Gas'] : 0.0, 2, '.', '' )
+        );
 
         if ( $log_debug && self::isDebugModeEnabled() ) {
             self::appendDebugLog(
@@ -933,7 +1009,7 @@ class DatabaseStorage {
                     wp_json_encode( $latest_half_hour, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ),
                     'Computed pie values:',
                     ...$formula_lines,
-                    'Total generation = ' . number_format( $total_generation, 2, '.', '' ) . ' GW',
+                    'Total generation = ' . $total_generation_formula . ' = ' . number_format( $total_generation, 2, '.', '' ) . ' GW',
                     'Clean Power = ' . $clean_power_formula . ' = ' . number_format( $clean_power, 2, '.', '' ) . ' GW',
                     sprintf(
                         'Clean Power share = (Clean Power(%1$s GW) / Total generation(%2$s GW)) * 100 = %3$s%%',
@@ -941,6 +1017,8 @@ class DatabaseStorage {
                         number_format( $total_generation, 2, '.', '' ),
                         number_format( $clean_power_percent, 1, '.', '' )
                     ),
+                    'Interconnectors by country:',
+                    ...$interconnector_country_lines,
                     str_repeat( '-', 120 ),
                 ]
             );

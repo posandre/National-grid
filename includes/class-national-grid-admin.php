@@ -1043,8 +1043,37 @@ class National_Grid_Admin {
             return;
         }
 
-        echo '<pre class="national-grid-admin-debug-log">' . esc_html( $content ) . '</pre>';
+        $rendered_content = self::render_debug_log_with_api_links( $content );
+        echo '<div class="national-grid-admin-debug-log">' . wp_kses(
+            $rendered_content,
+            [
+                'br' => [],
+                'strong' => [],
+                'a' => [
+                    'href' => [],
+                    'target' => [],
+                    'rel' => [],
+                ],
+            ]
+        ) . '</div>';
         echo '</div>';
+    }
+
+    /**
+     * Escapes debug log text and converts URLs to bold clickable links.
+     *
+     * @param string $content Raw debug log content.
+     * @return string
+     */
+    private static function render_debug_log_with_api_links( string $content ): string {
+        $escaped_content = esc_html( $content );
+        $clickable_content = make_clickable( $escaped_content );
+
+        return (string) preg_replace(
+            '/(<a [^>]*>https?:\/\/[^<]+<\/a>)/i',
+            '<strong>$1</strong>',
+            $clickable_content
+        );
     }
 
     /**

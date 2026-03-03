@@ -2,6 +2,9 @@
 
 /** Updates data from the National Energy System Operator Demand Data Update. */
 class Demand {
+    /** NESO CSV endpoint used to fetch embedded wind/solar demand updates. */
+    private const DEMAND_API_URL = 'https://api.neso.energy/dataset/7a12172a-939c-404c-b581-a6128b74f588/resource/177f6fa4-ae49-4182-81ea-0c6b35f26ca6/download/demanddataupdate.csv';
+
     /** Demand series keys stored in half-hour table. */
     public const KEYS = [
         'embedded_wind',   // Embedded wind generation – вітрова генерація, підключена до розподільчих мереж (не на рівні transmission)
@@ -24,7 +27,7 @@ class Demand {
    */
   public static function update(): array {
     $rows = Csv::parse(
-      'https://api.neso.energy/dataset/7a12172a-939c-404c-b581-a6128b74f588/resource/177f6fa4-ae49-4182-81ea-0c6b35f26ca6/download/demanddataupdate.csv',
+      self::DEMAND_API_URL,
       [
         'SETTLEMENT_DATE',
         'SETTLEMENT_PERIOD',
@@ -76,6 +79,7 @@ class Demand {
       DatabaseStorage::appendDebugLog(
         'Data written to DB (demand)',
         [
+          'API source: ' . self::DEMAND_API_URL,
           'Prepared demand rows count: ' . count( $validData ),
           'Field order: ' . wp_json_encode( $field_order, JSON_UNESCAPED_SLASHES ),
           'Demand rows payload:',

@@ -62,13 +62,12 @@ class Generation {
      * @throws Throwable
      */
   public static function update() {
-    $rawData = @file_get_contents(
-      sprintf(
-        'https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST/stream?publishDateTimeFrom=%s&publishDateTimeTo=%s',
-        gmdate('Y-m-d\\TH:i:s\\Z', time() - 24 * 60 * 60),
-        gmdate('Y-m-d\\TH:i:s\\Z')
-      )
+    $generation_api_url = sprintf(
+      'https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST/stream?publishDateTimeFrom=%s&publishDateTimeTo=%s',
+      gmdate('Y-m-d\\TH:i:s\\Z', time() - 24 * 60 * 60),
+      gmdate('Y-m-d\\TH:i:s\\Z')
     );
+    $rawData = @file_get_contents( $generation_api_url );
 
     if ($rawData === false) {
         throw new DataException( 'Generation data: Failed to read generatiob data from data.elexon.co.uk.' );
@@ -107,6 +106,7 @@ class Generation {
           DatabaseStorage::appendDebugLog(
               'Data written to DB (generation)',
               [
+                  'API source: ' . $generation_api_url,
                   'Prepared generation rows count: ' . count( $data ),
                   'Field order: ' . wp_json_encode( $field_order, JSON_UNESCAPED_SLASHES ),
                   'Generation rows payload:',
