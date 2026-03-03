@@ -6,10 +6,14 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
+
+global $wpdb;
+$table_prefix = isset( $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
 ?>
 <div class="national-grid-admin-info">
     <h2><?php esc_html_e( 'Plugin information', 'national-grid' ); ?></h2>
     <p><?php esc_html_e( 'This tab documents external APIs, mapped fields, shortcode usage, and the formulas used to build chart values.', 'national-grid' ); ?></p>
+    <p><strong><?php esc_html_e( 'Unit note:', 'national-grid' ); ?></strong> <?php esc_html_e( 'GW means gigawatts (1 GW = 1,000 MW).', 'national-grid' ); ?></p>
 
     <h3><?php esc_html_e( 'Plugin metadata', 'national-grid' ); ?></h3>
     <table class="widefat striped">
@@ -33,7 +37,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
     <h4><?php esc_html_e( '1) Elexon BMRS FUELINST stream (generation)', 'national-grid' ); ?></h4>
     <p><code>https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST/stream?publishDateTimeFrom=...&publishDateTimeTo=...</code></p>
-    <p><?php esc_html_e( 'Used in: Generation::update()', 'national-grid' ); ?></p>
     <table class="widefat striped">
         <thead>
         <tr>
@@ -59,7 +62,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
     <h4><?php esc_html_e( '2) NESO demand data CSV (embedded wind/solar)', 'national-grid' ); ?></h4>
     <p><code>https://api.neso.energy/dataset/7a12172a-939c-404c-b581-a6128b74f588/resource/177f6fa4-ae49-4182-81ea-0c6b35f26ca6/download/demanddataupdate.csv</code></p>
-    <p><?php esc_html_e( 'Used in: Demand::update()', 'national-grid' ); ?></p>
     <table class="widefat striped">
         <thead>
         <tr>
@@ -84,6 +86,60 @@ if ( ! defined( 'ABSPATH' ) ) {
             <td><code>EMBEDDED_SOLAR_GENERATION</code></td>
             <td><?php esc_html_e( 'Embedded solar generation converted to GW and stored as embedded_solar.', 'national-grid' ); ?></td>
         </tr>
+        </tbody>
+    </table>
+
+    <h3><?php esc_html_e( 'Database tables created by plugin', 'national-grid' ); ?></h3>
+
+    <h4><code><?php echo esc_html( $table_prefix . 'national_grid_past_five_minutes' ); ?></code></h4>
+    <p><?php esc_html_e( 'Stores 5-minute generation points. Primary key: time.', 'national-grid' ); ?></p>
+    <table class="widefat striped">
+        <thead>
+        <tr>
+            <th><?php esc_html_e( 'Column', 'national-grid' ); ?></th>
+            <th><?php esc_html_e( 'Description', 'national-grid' ); ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr><td><code>time</code></td><td><?php esc_html_e( 'UTC datetime for 5-minute point.', 'national-grid' ); ?></td></tr>
+        <tr><td><code>coal, ccgt, ocgt, nuclear, oil, wind, hydro, pumped, biomass, battery, other</code></td><td><?php esc_html_e( 'Generation values by source in GW.', 'national-grid' ); ?></td></tr>
+        <tr><td><code>ifa, moyle, britned, ewic, nemo, ifa2, nsl, eleclink, viking, greenlink</code></td><td><?php esc_html_e( 'Interconnector flows in GW.', 'national-grid' ); ?></td></tr>
+        </tbody>
+    </table>
+
+    <h4><code><?php echo esc_html( $table_prefix . 'national_grid_past_half_hours' ); ?></code></h4>
+    <p><?php esc_html_e( 'Stores aggregated half-hour rows used for frontend calculations. Primary key: time.', 'national-grid' ); ?></p>
+    <table class="widefat striped">
+        <thead>
+        <tr>
+            <th><?php esc_html_e( 'Column', 'national-grid' ); ?></th>
+            <th><?php esc_html_e( 'Description', 'national-grid' ); ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr><td><code>time</code></td><td><?php esc_html_e( 'UTC datetime for half-hour settlement/aggregation point.', 'national-grid' ); ?></td></tr>
+        <tr><td><code>embedded_wind, embedded_solar</code></td><td><?php esc_html_e( 'Demand dataset values in GW (embedded generation).', 'national-grid' ); ?></td></tr>
+        <tr><td><code>coal, ccgt, ocgt, nuclear, oil, wind, hydro, pumped, biomass, battery, other</code></td><td><?php esc_html_e( 'Aggregated generation values in GW.', 'national-grid' ); ?></td></tr>
+        <tr><td><code>ifa, moyle, britned, ewic, nemo, ifa2, nsl, eleclink, viking, greenlink</code></td><td><?php esc_html_e( 'Interconnector values in GW.', 'national-grid' ); ?></td></tr>
+        </tbody>
+    </table>
+
+    <h4><code><?php echo esc_html( $table_prefix . 'national_grid_logs' ); ?></code></h4>
+    <p><?php esc_html_e( 'Stores operation logs for manual/cron updates and errors.', 'national-grid' ); ?></p>
+    <table class="widefat striped">
+        <thead>
+        <tr>
+            <th><?php esc_html_e( 'Column', 'national-grid' ); ?></th>
+            <th><?php esc_html_e( 'Description', 'national-grid' ); ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr><td><code>id</code></td><td><?php esc_html_e( 'Auto-increment primary key.', 'national-grid' ); ?></td></tr>
+        <tr><td><code>created_at</code></td><td><?php esc_html_e( 'UTC datetime when log entry was written.', 'national-grid' ); ?></td></tr>
+        <tr><td><code>source</code></td><td><?php esc_html_e( 'Operation source: manual or cron.', 'national-grid' ); ?></td></tr>
+        <tr><td><code>status</code></td><td><?php esc_html_e( 'Log status value: success or error.', 'national-grid' ); ?></td></tr>
+        <tr><td><code>message</code></td><td><?php esc_html_e( 'Short log message.', 'national-grid' ); ?></td></tr>
+        <tr><td><code>context</code></td><td><?php esc_html_e( 'JSON payload with additional details.', 'national-grid' ); ?></td></tr>
         </tbody>
     </table>
 
@@ -167,6 +223,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
     <h3><?php esc_html_e( 'Automatic updates (WP-Cron)', 'national-grid' ); ?></h3>
     <p><?php esc_html_e( 'The plugin supports automatic data refresh via WordPress Cron.', 'national-grid' ); ?></p>
+    <p><?php esc_html_e( 'The plugin also has a separate cron task for automatic log cleanup. This cleanup event is scheduled only when "Automatic log cleanup" is enabled in settings (disabled by default).', 'national-grid' ); ?></p>
     <table class="widefat striped">
         <thead>
         <tr>
@@ -190,6 +247,18 @@ if ( ! defined( 'ABSPATH' ) ) {
         <tr>
             <td><?php esc_html_e( 'Execution flow', 'national-grid' ); ?></td>
             <td><?php esc_html_e( 'Cron hook runs update_data("cron"), which updates generation and demand datasets and writes results to the log.', 'national-grid' ); ?></td>
+        </tr>
+        <tr>
+            <td><?php esc_html_e( 'Log cleanup cron hook', 'national-grid' ); ?></td>
+            <td><code>national_grid_cron_clear_log</code></td>
+        </tr>
+        <tr>
+            <td><?php esc_html_e( 'Log cleanup schedule', 'national-grid' ); ?></td>
+            <td><?php esc_html_e( 'Uses custom interval schedule key national_grid_log_clear_interval. Interval is configured in hours via "Log cleanup interval".', 'national-grid' ); ?></td>
+        </tr>
+        <tr>
+            <td><?php esc_html_e( 'Log cleanup activation rule', 'national-grid' ); ?></td>
+            <td><?php esc_html_e( 'Scheduled only when "Automatic log cleanup" is enabled. If disabled, existing scheduled cleanup events are unscheduled.', 'national-grid' ); ?></td>
         </tr>
         </tbody>
     </table>
