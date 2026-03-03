@@ -342,19 +342,13 @@ class National_Grid_Admin {
      * @return void
      */
     public static function render_auto_update_field() {
-        $is_debug_enabled = DatabaseStorage::isDebugModeEnabled();
         $value = (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 );
-        $disabled_attr = $is_debug_enabled ? '' : ' disabled="disabled"';
         printf(
-            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s%4$s /> %3$s</label>',
+            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s /> %3$s</label>',
             esc_attr( NATIONAL_GRID_OPTION_AUTO_UPDATE ),
             checked( 1, $value, false ),
-            esc_html__( 'Enable automatic updates by cron', 'national-grid' ),
-            $disabled_attr
+            esc_html__( 'Enable automatic updates by cron', 'national-grid' )
         );
-        if ( ! $is_debug_enabled ) {
-            echo '<p class="description">' . esc_html__( 'Enable Debug mode to allow automatic cron updates.', 'national-grid' ) . '</p>';
-        }
     }
 
     /**
@@ -395,13 +389,11 @@ class National_Grid_Admin {
     public static function render_auto_clear_log_field() {
         $is_log_enabled = DatabaseStorage::isLogEnabled();
         $value = (int) get_option( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG, 0 );
-        $disabled_attr = $is_log_enabled ? '' : ' disabled="disabled"';
         printf(
-            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s%4$s /> %3$s</label>',
+            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s /> %3$s</label>',
             esc_attr( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG ),
             checked( 1, $value, false ),
-            esc_html__( 'Enable automatic plugin log cleanup by cron', 'national-grid' ),
-            $disabled_attr
+            esc_html__( 'Enable automatic plugin log cleanup by cron', 'national-grid' )
         );
         if ( ! $is_log_enabled ) {
             echo '<p class="description">' . esc_html__( 'Enable "Update event log" to use automatic log cleanup.', 'national-grid' ) . '</p>';
@@ -419,14 +411,15 @@ class National_Grid_Admin {
         if ( $value <= 0 ) {
             $value = 336;
         }
-        $disabled_attr = $is_log_enabled ? '' : ' disabled="disabled"';
         printf(
-            '<input type="number" name="%1$s" id="%1$s" value="%2$d" class="small-text" min="1"%4$s /> <span>%3$s</span>',
+            '<input type="number" name="%1$s" id="%1$s" value="%2$d" class="small-text" min="1" /> <span>%3$s</span>',
             esc_attr( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS ),
             $value,
-            esc_html__( 'hours', 'national-grid' ),
-            $disabled_attr
+            esc_html__( 'hours', 'national-grid' )
         );
+        if ( ! $is_log_enabled ) {
+            echo '<p class="description">' . esc_html__( 'Enable "Update event log" to use automatic log cleanup.', 'national-grid' ) . '</p>';
+        }
     }
 
     /**
@@ -500,8 +493,7 @@ class National_Grid_Admin {
      * @return void
      */
     public static function maybe_sync_cron_event() {
-        $enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 )
-            && DatabaseStorage::isDebugModeEnabled();
+        $enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 );
         $timestamp = wp_next_scheduled( self::CRON_HOOK );
 
         if ( ! $enabled ) {
@@ -565,10 +557,6 @@ class National_Grid_Admin {
      * @return void
      */
     public static function handle_cron_update() {
-        if ( ! DatabaseStorage::isDebugModeEnabled() ) {
-            return;
-        }
-
         self::update_data( 'cron' );
     }
 

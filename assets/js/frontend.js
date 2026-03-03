@@ -39,7 +39,7 @@
   ];
 
   // Minimum share of a stacked bar segment required to render inline label.
-  var BAR_LABEL_MIN_PERCENT = 8;
+  var BAR_LABEL_MIN_PERCENT = 20;
 
   // Fallback palette when no explicit color mapping exists.
   var palette = [
