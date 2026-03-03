@@ -32,6 +32,8 @@ define( 'NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG', 'national_grid_auto_clear_log' );
 define( 'NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS', 'national_grid_log_clear_interval_hours' );
 // Option name for enabling/disabling plugin event logs table writes.
 define( 'NATIONAL_GRID_OPTION_ENABLE_LOG', 'national_grid_enable_log' );
+// Option name for enabling/disabling frontend chart animations.
+define( 'NATIONAL_GRID_OPTION_CHART_ANIMATION', 'national_grid_chart_animation' );
 // Option name for debug mode toggle.
 define( 'NATIONAL_GRID_OPTION_DEBUG_MODE', 'national_grid_debug_mode' );
 
@@ -164,6 +166,10 @@ function national_grid_activate() {
 
     if ( false === get_option( NATIONAL_GRID_OPTION_ENABLE_LOG, false ) ) {
         add_option( NATIONAL_GRID_OPTION_ENABLE_LOG, 1 );
+    }
+
+    if ( false === get_option( NATIONAL_GRID_OPTION_CHART_ANIMATION, false ) ) {
+        add_option( NATIONAL_GRID_OPTION_CHART_ANIMATION, 1 );
     }
 
     if ( false === get_option( NATIONAL_GRID_OPTION_DEBUG_MODE, false ) ) {

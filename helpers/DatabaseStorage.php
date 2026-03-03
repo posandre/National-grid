@@ -11,6 +11,10 @@ class DatabaseStorage {
     private const STATUS_ERROR = 'error';
     /** Debug log filename in uploads directory. */
     private const DEBUG_LOG_FILENAME = 'national-grid-debug.log';
+    /** Transient key used for short-lived frontend chart payload cache. */
+    private const FRONTEND_CHART_TRANSIENT_KEY = 'national_grid_frontend_chart_data';
+    /** Frontend chart payload cache lifetime in seconds. */
+    private const FRONTEND_CHART_TRANSIENT_TTL = 60;
     /** Maps frontend pie labels to storage columns used for aggregation. */
     private const FRONTEND_PIE_MAPPING = [
         'Gas' => [
@@ -362,6 +366,8 @@ class DatabaseStorage {
             throw new DataException( 'Failed to update generation data in storage.', 0, $e );
         }
 
+        self::invalidateFrontendChartCache();
+
         return [
             'rows_written' =>  $rows_written,
             'rows_aggregated' =>  $aggregated,
@@ -495,6 +501,8 @@ class DatabaseStorage {
             }
             throw new DataException( 'Failed to update demand data in storage.', 0, $e );
         }
+
+        self::invalidateFrontendChartCache();
 
         return [
             'rows_written' =>  $rows_written,
@@ -1060,16 +1068,34 @@ class DatabaseStorage {
      * @return array<string, mixed>
      */
     public static function getFrontendChartData() {
+        $cached = get_transient( self::FRONTEND_CHART_TRANSIENT_KEY );
+        if ( is_array( $cached ) ) {
+            return $cached;
+        }
+
         $latest_five_minutes = self::getLatestFiveMinuteGeneration();
         $latest_half_hour = self::getLatestHalfHourRow();
         $pie = self::buildFrontendPieData( $latest_five_minutes, $latest_half_hour );
 
-        return [
+        $payload = [
             'latest' => $latest_half_hour,
             'latest_five_minutes' => $latest_five_minutes,
             'latest_half_hour' => $latest_half_hour,
             'pie' => $pie
         ];
+
+        set_transient( self::FRONTEND_CHART_TRANSIENT_KEY, $payload, self::FRONTEND_CHART_TRANSIENT_TTL );
+
+        return $payload;
+    }
+
+    /**
+     * Clears cached frontend chart payload.
+     *
+     * @return void
+     */
+    public static function invalidateFrontendChartCache(): void {
+        delete_transient( self::FRONTEND_CHART_TRANSIENT_KEY );
     }
 
     /**

@@ -7,6 +7,8 @@
 
   // Localized runtime settings injected by wp_localize_script.
   var config = window.nationalGridFrontend;
+  // Controls Chart.js animation for pie/bar charts.
+  var CHART_ANIMATION = Number(config.chartAnimation) === 1 ? {} : false;
   // All frontend widget instances on the current page.
   var widgets = document.querySelectorAll(".national-grid-frontend");
   if (!widgets.length) {
@@ -483,6 +485,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: CHART_ANIMATION,
         plugins: {
           legend: {
             display: false,
@@ -531,6 +534,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: CHART_ANIMATION,
         scales: {
           x: {
             stacked: true,

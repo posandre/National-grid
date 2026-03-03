@@ -18,6 +18,7 @@ class National_Grid_Frontend {
 
     private static $instance_counter = 0;
     private static $assets_required = false;
+    private static $chart_data_request_cache = null;
 
     /**
      * Registers frontend shortcode, assets and AJAX handlers.
@@ -67,7 +68,7 @@ class National_Grid_Frontend {
                 )
             )
             : '';
-        $chart_data = DatabaseStorage::getFrontendChartData();
+        $chart_data = self::get_chart_data();
         $instance_id = 'national-grid-frontend-' . self::$instance_counter;
 
         $payload = [
@@ -147,6 +148,7 @@ class National_Grid_Frontend {
                 'liveHeadingSuffix' => __( ' - Generation Mix and Type.', 'national-grid' ),
                 'timezoneLabel' => self::get_timezone_label(),
                 'timezone' => self::get_timezone_for_js(),
+                'chartAnimation' => 1 === (int) get_option( NATIONAL_GRID_OPTION_CHART_ANIMATION, 1 ) ? 1 : 0,
             ]
         );
     }
@@ -166,7 +168,7 @@ class National_Grid_Frontend {
             );
         }
 
-        $chart_data = DatabaseStorage::getFrontendChartData();
+        $chart_data = self::get_chart_data();
 
         wp_send_json_success(
             [
@@ -214,6 +216,21 @@ class National_Grid_Frontend {
         }
 
         return trim( (string) $option_description );
+    }
+
+    /**
+     * Returns chart data cached within current request lifecycle.
+     *
+     * @return array<string, mixed>
+     */
+    private static function get_chart_data() {
+        if ( is_array( self::$chart_data_request_cache ) ) {
+            return self::$chart_data_request_cache;
+        }
+
+        self::$chart_data_request_cache = DatabaseStorage::getFrontendChartData();
+
+        return self::$chart_data_request_cache;
     }
 
     /**

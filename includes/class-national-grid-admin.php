@@ -101,6 +101,16 @@ class National_Grid_Admin {
 
         register_setting(
             'national_grid_settings',
+            NATIONAL_GRID_OPTION_CHART_ANIMATION,
+            [
+                'type' => 'boolean',
+                'sanitize_callback' => [ __CLASS__, 'sanitize_chart_animation' ],
+                'default' => 1,
+            ]
+        );
+
+        register_setting(
+            'national_grid_settings',
             NATIONAL_GRID_OPTION_AUTO_UPDATE,
             [
                 'type' => 'boolean',
@@ -219,6 +229,14 @@ class National_Grid_Admin {
             self::PAGE_SLUG,
             'national_grid_main'
         );
+
+        add_settings_field(
+            NATIONAL_GRID_OPTION_CHART_ANIMATION,
+            __( 'Chart animation', 'national-grid' ),
+            [ __CLASS__, 'render_chart_animation_field' ],
+            self::PAGE_SLUG,
+            'national_grid_main'
+        );
     }
 
     /**
@@ -264,6 +282,16 @@ class National_Grid_Admin {
      * @return int
      */
     public static function sanitize_enable_log( $value ) {
+        return ! empty( $value ) ? 1 : 0;
+    }
+
+    /**
+     * Normalizes chart animation toggle to 1 or 0.
+     *
+     * @param mixed $value Raw chart animation option value.
+     * @return int
+     */
+    public static function sanitize_chart_animation( $value ) {
         return ! empty( $value ) ? 1 : 0;
     }
 
@@ -426,6 +454,21 @@ class National_Grid_Admin {
             '<textarea name="%1$s" id="%1$s" class="large-text" rows="5">%2$s</textarea>',
             esc_attr( NATIONAL_GRID_OPTION_MODULE_DESCRIPTION ),
             esc_textarea( $value )
+        );
+    }
+
+    /**
+     * Renders chart animation checkbox field.
+     *
+     * @return void
+     */
+    public static function render_chart_animation_field() {
+        $value = (int) get_option( NATIONAL_GRID_OPTION_CHART_ANIMATION, 1 );
+        printf(
+            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s /> %3$s</label>',
+            esc_attr( NATIONAL_GRID_OPTION_CHART_ANIMATION ),
+            checked( 1, $value, false ),
+            esc_html__( 'Enable Chart.js animation on frontend charts', 'national-grid' )
         );
     }
 
