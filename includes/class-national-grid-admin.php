@@ -121,6 +121,16 @@ class National_Grid_Admin {
 
         register_setting(
             'national_grid_settings',
+            NATIONAL_GRID_OPTION_ENABLE_LOG,
+            [
+                'type' => 'boolean',
+                'sanitize_callback' => [ __CLASS__, 'sanitize_enable_log' ],
+                'default' => 1,
+            ]
+        );
+
+        register_setting(
+            'national_grid_settings',
             NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG,
             [
                 'type' => 'boolean',
@@ -166,6 +176,14 @@ class National_Grid_Admin {
             NATIONAL_GRID_OPTION_DEBUG_MODE,
             __( 'Debug mode', 'national-grid' ),
             [ __CLASS__, 'render_debug_mode_field' ],
+            self::PAGE_SLUG,
+            'national_grid_main'
+        );
+
+        add_settings_field(
+            NATIONAL_GRID_OPTION_ENABLE_LOG,
+            __( 'Update event log', 'national-grid' ),
+            [ __CLASS__, 'render_enable_log_field' ],
             self::PAGE_SLUG,
             'national_grid_main'
         );
@@ -240,6 +258,16 @@ class National_Grid_Admin {
     }
 
     /**
+     * Normalizes update event logging toggle to 1 or 0.
+     *
+     * @param mixed $value Raw log toggle value.
+     * @return int
+     */
+    public static function sanitize_enable_log( $value ) {
+        return ! empty( $value ) ? 1 : 0;
+    }
+
+    /**
      * Normalizes automatic log cleanup toggle to 1 or 0.
      *
      * @param mixed $value Raw automatic log cleanup option value.
@@ -286,13 +314,19 @@ class National_Grid_Admin {
      * @return void
      */
     public static function render_auto_update_field() {
+        $is_debug_enabled = DatabaseStorage::isDebugModeEnabled();
         $value = (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 );
+        $disabled_attr = $is_debug_enabled ? '' : ' disabled="disabled"';
         printf(
-            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s /> %3$s</label>',
+            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s%4$s /> %3$s</label>',
             esc_attr( NATIONAL_GRID_OPTION_AUTO_UPDATE ),
             checked( 1, $value, false ),
-            esc_html__( 'Enable automatic updates by cron', 'national-grid' )
+            esc_html__( 'Enable automatic updates by cron', 'national-grid' ),
+            $disabled_attr
         );
+        if ( ! $is_debug_enabled ) {
+            echo '<p class="description">' . esc_html__( 'Enable Debug mode to allow automatic cron updates.', 'national-grid' ) . '</p>';
+        }
     }
 
     /**
@@ -311,18 +345,39 @@ class National_Grid_Admin {
     }
 
     /**
+     * Renders update event logging checkbox field.
+     *
+     * @return void
+     */
+    public static function render_enable_log_field() {
+        $value = (int) get_option( NATIONAL_GRID_OPTION_ENABLE_LOG, 1 );
+        printf(
+            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s /> %3$s</label>',
+            esc_attr( NATIONAL_GRID_OPTION_ENABLE_LOG ),
+            checked( 1, $value, false ),
+            esc_html__( 'Store update success/error events in Log tab', 'national-grid' )
+        );
+    }
+
+    /**
      * Renders automatic log cleanup checkbox field.
      *
      * @return void
      */
     public static function render_auto_clear_log_field() {
+        $is_log_enabled = DatabaseStorage::isLogEnabled();
         $value = (int) get_option( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG, 0 );
+        $disabled_attr = $is_log_enabled ? '' : ' disabled="disabled"';
         printf(
-            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s /> %3$s</label>',
+            '<label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s%4$s /> %3$s</label>',
             esc_attr( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG ),
             checked( 1, $value, false ),
-            esc_html__( 'Enable automatic plugin log cleanup by cron', 'national-grid' )
+            esc_html__( 'Enable automatic plugin log cleanup by cron', 'national-grid' ),
+            $disabled_attr
         );
+        if ( ! $is_log_enabled ) {
+            echo '<p class="description">' . esc_html__( 'Enable "Update event log" to use automatic log cleanup.', 'national-grid' ) . '</p>';
+        }
     }
 
     /**
@@ -331,15 +386,18 @@ class National_Grid_Admin {
      * @return void
      */
     public static function render_log_clear_interval_hours_field() {
+        $is_log_enabled = DatabaseStorage::isLogEnabled();
         $value = (int) get_option( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS, 336 );
         if ( $value <= 0 ) {
             $value = 336;
         }
+        $disabled_attr = $is_log_enabled ? '' : ' disabled="disabled"';
         printf(
-            '<input type="number" name="%1$s" id="%1$s" value="%2$d" class="small-text" min="1" /> <span>%3$s</span>',
+            '<input type="number" name="%1$s" id="%1$s" value="%2$d" class="small-text" min="1"%4$s /> <span>%3$s</span>',
             esc_attr( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS ),
             $value,
-            esc_html__( 'hours', 'national-grid' )
+            esc_html__( 'hours', 'national-grid' ),
+            $disabled_attr
         );
     }
 
@@ -399,7 +457,8 @@ class National_Grid_Admin {
      * @return void
      */
     public static function maybe_sync_cron_event() {
-        $enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 );
+        $enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 )
+            && DatabaseStorage::isDebugModeEnabled();
         $timestamp = wp_next_scheduled( self::CRON_HOOK );
 
         if ( ! $enabled ) {
@@ -421,7 +480,8 @@ class National_Grid_Admin {
      * @return void
      */
     public static function maybe_sync_log_clear_cron_event() {
-        $enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG, 0 );
+        $enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG, 0 )
+            && DatabaseStorage::isLogEnabled();
         $timestamp = wp_next_scheduled( self::LOG_CLEAR_CRON_HOOK );
 
         if ( ! $enabled ) {
@@ -443,6 +503,10 @@ class National_Grid_Admin {
      * @return void
      */
     public static function handle_cron_update() {
+        if ( ! DatabaseStorage::isDebugModeEnabled() ) {
+            return;
+        }
+
         self::update_data( 'cron' );
     }
 
@@ -452,25 +516,35 @@ class National_Grid_Admin {
      * @return void
      */
     public static function handle_cron_clear_log() {
-        $result = DatabaseStorage::clearLogs();
-        $debug_result = DatabaseStorage::clearDebugLogFile();
-        if ( false === $result ) {
-            DatabaseStorage::logError( 'cron', 'Automatic log cleanup failed.' );
-            return;
-        }
-        if ( ! $debug_result ) {
-            DatabaseStorage::logError( 'cron', 'Automatic debug log cleanup failed.' );
+        if ( ! DatabaseStorage::isLogEnabled() ) {
             return;
         }
 
-        DatabaseStorage::logSuccess(
-            'cron',
-            'Automatic log cleanup completed.',
-            [
-                'rows_deleted' => (int) $result,
-                'debug_log_cleared' => true,
-            ]
-        );
+        $result = DatabaseStorage::clearLogs();
+        $debug_result = DatabaseStorage::clearDebugLogFile();
+        if ( false === $result ) {
+            if ( DatabaseStorage::isLogEnabled() ) {
+                DatabaseStorage::logError( 'cron', 'Automatic log cleanup failed.' );
+            }
+            return;
+        }
+        if ( ! $debug_result ) {
+            if ( DatabaseStorage::isLogEnabled() ) {
+                DatabaseStorage::logError( 'cron', 'Automatic debug log cleanup failed.' );
+            }
+            return;
+        }
+
+        if ( DatabaseStorage::isLogEnabled() ) {
+            DatabaseStorage::logSuccess(
+                'cron',
+                'Automatic log cleanup completed.',
+                [
+                    'rows_deleted' => (int) $result,
+                    'debug_log_cleared' => true,
+                ]
+            );
+        }
     }
 
     /**
@@ -488,7 +562,9 @@ class National_Grid_Admin {
                 ! is_array( $generation_update_result )
                 || ! isset( $generation_update_result['rows_written'], $generation_update_result['rows_aggregated'], $generation_update_result['rows_deleted'] )
             ) {
-                DatabaseStorage::logError( $source, 'Generation update failed.', [ 'generation_result' => $generation_update_result ] );
+                if ( DatabaseStorage::isLogEnabled() ) {
+                    DatabaseStorage::logError( $source, 'Generation update failed.', [ 'generation_result' => $generation_update_result ] );
+                }
                 return [
                     'success' => false,
                     'message' => __( 'Update failed. Check log for details.', 'national-grid' ),
@@ -501,21 +577,25 @@ class National_Grid_Admin {
                 || empty( $demand_update_result['success'] )
                 || ! isset( $demand_update_result['rows_written'], $demand_update_result['rows_deleted'], $demand_update_result['read'], $demand_update_result['valid'], $demand_update_result['skipped'] )
             ) {
-                DatabaseStorage::logError( $source, 'Demand update failed.', [ 'demand_result' => $demand_update_result ] );
+                if ( DatabaseStorage::isLogEnabled() ) {
+                    DatabaseStorage::logError( $source, 'Demand update failed.', [ 'demand_result' => $demand_update_result ] );
+                }
                 return [
                     'success' => false,
                     'message' => __( 'Update failed. Check log for details.', 'national-grid' ),
                 ];
             }
 
-            DatabaseStorage::logSuccess(
-                $source,
-                'Data updated successfully.',
-                [
-                    'generation' => $generation_update_result,
-                    'demand' => $demand_update_result,
-                ]
-            );
+            if ( DatabaseStorage::isLogEnabled() ) {
+                DatabaseStorage::logSuccess(
+                    $source,
+                    'Data updated successfully.',
+                    [
+                        'generation' => $generation_update_result,
+                        'demand' => $demand_update_result,
+                    ]
+                );
+            }
 
             if ( DatabaseStorage::isDebugModeEnabled() ) {
                 DatabaseStorage::appendDebugLog(
@@ -537,28 +617,32 @@ class National_Grid_Admin {
                 'message' => __( 'Update completed. Check log for details.', 'national-grid' ),
             ];
         } catch ( DataException $e ) {
-            DatabaseStorage::logError(
-                $source,
-                $e->getMessage(),
-                [
-                    'exception' => get_class( $e ),
-                    'previous' => $e->getPrevious() ? $e->getPrevious()->getMessage() : '',
-                ]
-            );
+            if ( DatabaseStorage::isLogEnabled() ) {
+                DatabaseStorage::logError(
+                    $source,
+                    $e->getMessage(),
+                    [
+                        'exception' => get_class( $e ),
+                        'previous' => $e->getPrevious() ? $e->getPrevious()->getMessage() : '',
+                    ]
+                );
+            }
 
             return [
                 'success' => false,
                 'message' => __( 'Update failed. Check log for details.', 'national-grid' ),
             ];
         } catch ( Throwable $e ) {
-            DatabaseStorage::logError(
-                $source,
-                'Unexpected update error.',
-                [
-                    'exception' => get_class( $e ),
-                    'message' => $e->getMessage(),
-                ]
-            );
+            if ( DatabaseStorage::isLogEnabled() ) {
+                DatabaseStorage::logError(
+                    $source,
+                    'Unexpected update error.',
+                    [
+                        'exception' => get_class( $e ),
+                        'message' => $e->getMessage(),
+                    ]
+                );
+            }
 
             return [
                 'success' => false,
@@ -641,6 +725,14 @@ class National_Grid_Admin {
      * @return void
      */
     public static function handle_fetch_log_section_ajax() {
+        if ( ! DatabaseStorage::isLogEnabled() ) {
+            wp_send_json_success(
+                [
+                    'html' => '',
+                ]
+            );
+        }
+
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_send_json_error(
                 [
@@ -676,6 +768,11 @@ class National_Grid_Admin {
      * @return void
      */
     public static function handle_clear_log() {
+        if ( ! DatabaseStorage::isLogEnabled() ) {
+            wp_safe_redirect( admin_url( 'options-general.php?page=' . self::PAGE_SLUG . '&tab=settings' ) );
+            exit;
+        }
+
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( esc_html__( 'You do not have permission to do that.', 'national-grid' ) );
         }
@@ -987,6 +1084,10 @@ class National_Grid_Admin {
      * @return string
      */
     private static function get_logs_section_html() {
+        if ( ! DatabaseStorage::isLogEnabled() ) {
+            return '';
+        }
+
         ob_start();
         self::render_logs_section();
         return ob_get_clean();
@@ -1087,6 +1188,7 @@ class National_Grid_Admin {
         }
 
         $debug_mode_enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_DEBUG_MODE, 0 );
+        $is_log_enabled = DatabaseStorage::isLogEnabled();
         $active_tab = isset( $_GET['tab'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             ? sanitize_key( (string) wp_unslash( $_GET['tab'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             : 'settings';
@@ -1094,6 +1196,9 @@ class National_Grid_Admin {
             $active_tab = 'settings';
         }
         if ( 'debug' === $active_tab && ! $debug_mode_enabled ) {
+            $active_tab = 'settings';
+        }
+        if ( 'logs' === $active_tab && ! $is_log_enabled ) {
             $active_tab = 'settings';
         }
 
@@ -1138,14 +1243,16 @@ class National_Grid_Admin {
         echo '<nav class="nav-tab-wrapper">';
         echo '<a href="' . esc_url( $settings_tab_url ) . '" class="nav-tab ' . esc_attr( 'settings' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Options', 'national-grid' ) . '</a>';
         echo '<a href="' . esc_url( $update_tab_url ) . '" class="nav-tab ' . esc_attr( 'update' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Update data', 'national-grid' ) . '</a>';
-        echo '<a href="' . esc_url( $logs_tab_url ) . '" class="nav-tab ' . esc_attr( 'logs' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Log', 'national-grid' ) . '</a>';
+        if ( $is_log_enabled ) {
+            echo '<a href="' . esc_url( $logs_tab_url ) . '" class="nav-tab ' . esc_attr( 'logs' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Log', 'national-grid' ) . '</a>';
+        }
         echo '<a href="' . esc_url( $info_tab_url ) . '" class="nav-tab ' . esc_attr( 'info' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Info', 'national-grid' ) . '</a>';
         if ( $debug_mode_enabled ) {
             echo '<a href="' . esc_url( $debug_tab_url ) . '" class="nav-tab ' . esc_attr( 'debug' === $active_tab ? 'nav-tab-active' : '' ) . '">' . esc_html__( 'Debug', 'national-grid' ) . '</a>';
         }
         echo '</nav>';
 
-        if ( isset( $_GET['national_grid_log_cleared'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( $is_log_enabled && isset( $_GET['national_grid_log_cleared'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Log cleared.', 'national-grid' ) . '</p></div>';
         }
         if ( isset( $_GET['national_grid_debug_log_cleared'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -1175,7 +1282,7 @@ class National_Grid_Admin {
             echo '<div id="national-grid-update-message" class="national-grid-admin-message" aria-live="polite"></div>';
         }
 
-        if ( 'logs' === $active_tab ) {
+        if ( 'logs' === $active_tab && $is_log_enabled ) {
             self::render_logs_section();
         }
 

@@ -30,6 +30,8 @@ define( 'NATIONAL_GRID_OPTION_AUTO_UPDATE', 'national_grid_auto_update' );
 define( 'NATIONAL_GRID_OPTION_AUTO_CLEAR_LOG', 'national_grid_auto_clear_log' );
 // Option name for automatic plugin log cleanup interval (in hours).
 define( 'NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS', 'national_grid_log_clear_interval_hours' );
+// Option name for enabling/disabling plugin event logs table writes.
+define( 'NATIONAL_GRID_OPTION_ENABLE_LOG', 'national_grid_enable_log' );
 // Option name for debug mode toggle.
 define( 'NATIONAL_GRID_OPTION_DEBUG_MODE', 'national_grid_debug_mode' );
 
@@ -160,6 +162,10 @@ function national_grid_activate() {
         add_option( NATIONAL_GRID_OPTION_LOG_CLEAR_INTERVAL_HOURS, 336 );
     }
 
+    if ( false === get_option( NATIONAL_GRID_OPTION_ENABLE_LOG, false ) ) {
+        add_option( NATIONAL_GRID_OPTION_ENABLE_LOG, 1 );
+    }
+
     if ( false === get_option( NATIONAL_GRID_OPTION_DEBUG_MODE, false ) ) {
         add_option( NATIONAL_GRID_OPTION_DEBUG_MODE, 0 );
     }
@@ -187,14 +193,17 @@ add_action( 'plugins_loaded', 'national_grid_bootstrap' );
  */
 function national_grid_plugin_action_links( $links ) {
     $base_url = admin_url( 'options-general.php?page=national-grid-settings' );
+    $is_log_enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_ENABLE_LOG, 1 );
     $settings_link = '<a href="' . esc_url( add_query_arg( 'tab', 'settings', $base_url ) ) . '">' . esc_html__( 'Settings', 'national-grid' ) . '</a>';
     $update_link = '<a href="' . esc_url( add_query_arg( 'tab', 'update', $base_url ) ) . '">' . esc_html__( 'Update data', 'national-grid' ) . '</a>';
-    $log_link = '<a href="' . esc_url( add_query_arg( 'tab', 'logs', $base_url ) ) . '">' . esc_html__( 'Log', 'national-grid' ) . '</a>';
     $info_link = '<a href="' . esc_url( add_query_arg( 'tab', 'info', $base_url ) ) . '">' . esc_html__( 'Info', 'national-grid' ) . '</a>';
 
     $links[] = $settings_link;
     $links[] = $update_link;
-    $links[] = $log_link;
+    if ( $is_log_enabled ) {
+        $log_link = '<a href="' . esc_url( add_query_arg( 'tab', 'logs', $base_url ) ) . '">' . esc_html__( 'Log', 'national-grid' ) . '</a>';
+        $links[] = $log_link;
+    }
     $links[] = $info_link;
 
     return $links;

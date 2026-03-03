@@ -88,6 +88,10 @@ class DatabaseStorage {
      * @return bool
      */
     public static function logEvent( $source, $status, $message, array $context = [] ) {
+        if ( ! self::isLogEnabled() ) {
+            return true;
+        }
+
         global $wpdb;
 
         $table_name = self::getLogsTableName();
@@ -104,6 +108,15 @@ class DatabaseStorage {
         );
 
         return false !== $result;
+    }
+
+    /**
+     * Returns true when plugin event log storage is enabled.
+     *
+     * @return bool
+     */
+    public static function isLogEnabled(): bool {
+        return 1 === (int) get_option( NATIONAL_GRID_OPTION_ENABLE_LOG, 1 );
     }
 
     /**
