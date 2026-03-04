@@ -649,22 +649,12 @@ class DatabaseStorage {
 
         $table_name = $wpdb->prefix . 'national_grid_past_half_hours';
         $sql = 'SELECT MAX(`time`) FROM `' . esc_sql( $table_name ) . '`';
-        $latest_from_table = $wpdb->get_var( $sql );
-        $current_half_hour = gmdate( 'Y-m-d H:i:s', time() - ( time() % ( 30 * MINUTE_IN_SECONDS ) ) );
-        $source = 'current_half_hour';
-
-        if ( ! is_string( $latest_from_table ) || '' === $latest_from_table ) {
-            $latest_half_hour = $current_half_hour;
-        } else {
-            if ( $latest_from_table > $current_half_hour ) {
-                $latest_half_hour = $latest_from_table;
-                $source = 'table_max';
-            } else {
-                $latest_half_hour = $current_half_hour;
-            }
+        $latest_half_hour = $wpdb->get_var( $sql );
+        if ( is_string( $latest_half_hour ) && '' !== $latest_half_hour ) {
+            return $latest_half_hour;
         }
 
-        return $latest_half_hour;
+        return gmdate( 'Y-m-d H:i:s', time() - ( time() % ( 30 * MINUTE_IN_SECONDS ) ) );
     }
 
     /**
