@@ -17,14 +17,14 @@
 
   // Display order for pie slices and legend entries.
   var COMPONENT_ORDER = [
-    "Storage",
-    "Interconnectors",
-    "Biomass",
-    "Nuclear",
-    "Hydroelectric",
-    "Solar",
-    "Wind",
     "Gas",
+    "Wind",
+    "Solar",
+    "Hydroelectric",
+    "Nuclear",
+    "Biomass",
+    "Interconnectors",
+    "Storage",
   ];
 
   // Source labels included in the clean power percentage metric.
