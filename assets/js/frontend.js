@@ -492,6 +492,9 @@
           },
           tooltip: {
             callbacks: {
+              title: function () {
+                return "";
+              },
               label: function (context) {
                 var dataset = context.dataset || null;
                 var total = getDatasetTotal(dataset);
