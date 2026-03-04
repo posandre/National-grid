@@ -2,9 +2,15 @@
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  margin: 60px 0;
+  margin: 0 0 0 60px;
   overflow-x: hidden;
   border: 1px solid #dfdfdf;
+  border-top-color: #817cba;
+}
+
+.section-toggle-builder + .container .national-grid-frontend,  .national-grid-frontend .page-template-default {
+  margin-top: 60px;
+  border-top: none;
 }
 
 .national-grid-frontend-header {
