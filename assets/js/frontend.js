@@ -143,12 +143,12 @@
       ctx.fillStyle = "#334e68";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.font = "600 11px sans-serif";
+      ctx.font = "700 14px sans-serif";
       ctx.fillText("Total Generation", centerX, centerY - 10);
 
       ctx.fillStyle = "#102a43";
       ctx.font = "700 14px sans-serif";
-      ctx.fillText(total.toFixed(2) + " GW", centerX, centerY + 10);
+      ctx.fillText(total.toFixed(1) + " GW", centerX, centerY + 10);
       ctx.restore();
     },
   };
@@ -195,7 +195,7 @@
           }
 
           var barHeight = Math.abs(bar.base - bar.y);
-          ctx.fillText(value.toFixed(2) + " GW", bar.x, bar.y + barHeight / 2);
+          ctx.fillText(value.toFixed(1) + " GW", bar.x, bar.y + barHeight / 2);
         });
       });
 
@@ -486,6 +486,11 @@
         responsive: true,
         maintainAspectRatio: false,
         animation: CHART_ANIMATION,
+        cutout: "45%",
+        interaction: {
+          mode: "nearest",
+          intersect: true,
+        },
         plugins: {
           legend: {
             display: false,
@@ -505,7 +510,7 @@
                 return (
                   label +
                   ": " +
-                  value.toFixed(2) +
+                  value.toFixed(1) +
                   " GW (" +
                   percent.toFixed(1) +
                   "%)"
@@ -568,7 +573,7 @@
               label: function (context) {
                 var value = Number(context.raw);
                 var safeValue = Number.isFinite(value) ? value : 0;
-                return (context.dataset.label || "") + ": " + safeValue.toFixed(2) + " GW";
+                return (context.dataset.label || "") + ": " + safeValue.toFixed(1) + " GW";
               },
             },
           },
