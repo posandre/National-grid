@@ -18,6 +18,18 @@
   padding: 20px 15px;
 }
 
+.national-grid-frontend--header-paddings-big .national-grid-frontend-header {
+  padding: 20px 15px;
+}
+
+.national-grid-frontend--header-paddings-normal .national-grid-frontend-header {
+  padding: 10px 15px;
+}
+
+.national-grid-frontend--header-paddings-small .national-grid-frontend-header {
+  padding: 5px 15px;
+}
+
 .national-grid-frontend-title, .page-template-default .national-grid-frontend .national-grid-frontend-title{
   font-size: 2rem;
   line-height: 1.2;
