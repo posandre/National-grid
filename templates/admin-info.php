@@ -165,6 +165,10 @@ $table_prefix = isset( $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
             <td><code>additional_class</code></td>
             <td><?php esc_html_e( 'Optional extra CSS class(es) added to the root widget container.', 'national-grid' ); ?></td>
         </tr>
+        <tr>
+            <td><code>hide_title</code></td>
+            <td><?php esc_html_e( 'Set to 1/true/yes/on to hide the entire header block (.national-grid-frontend-header).', 'national-grid' ); ?></td>
+        </tr>
         </tbody>
     </table>
 
@@ -172,6 +176,7 @@ $table_prefix = isset( $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
     <pre>[show-national-grid]</pre>
     <pre>[show-national-grid title="National Grid - Live" description="National grid: Today-Generation Mix and Type"]</pre>
     <pre>[show-national-grid title="" description="" additional_class="my-grid my-grid--compact"]</pre>
+    <pre>[show-national-grid hide_title="1"]</pre>
 
     <h3><?php esc_html_e( 'Chart calculation logic', 'national-grid' ); ?></h3>
     <h4><?php esc_html_e( 'Pie chart source mapping', 'national-grid' ); ?></h4>

@@ -4,8 +4,8 @@
   max-width: 100%;
   margin: 0 0 60px 0;
   overflow-x: hidden;
-  border: 1px solid #dfdfdf;
-  border-top-color: #817cba;
+  border: 1px none #817cba;
+  border-top-style: solid;
 }
 
 .section-toggle-builder + .container .national-grid-frontend,  .national-grid-frontend .page-template-default {
@@ -29,7 +29,10 @@
 }
 
 .national-grid-frontend-title, .page-template-default .national-grid-frontend .national-grid-frontend-title,
-.national-grid-frontend-description, .page-template-default .national-grid-frontend .national-grid-frontend-description {
+.national-grid-frontend-description, .page-template-default .national-grid-frontend .national-grid-frontend-description,
+.national-grid-frontend-description p, .page-template-default .national-grid-frontend .national-grid-frontend-description p,
+.national-grid-frontend-description span, .page-template-default .national-grid-frontend .national-grid-frontend-description span,
+.national-grid-frontend-description a, .page-template-default .national-grid-frontend .national-grid-frontend-description a{
   color: white;
   margin: 0;
   padding: 0;

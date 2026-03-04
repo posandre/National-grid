@@ -44,18 +44,29 @@ class National_Grid_Frontend {
         self::enqueue_assets();
         self::$instance_counter++;
 
+        $raw_atts = is_array( $atts ) ? $atts : [];
+        $has_explicit_title = array_key_exists( 'title', $raw_atts );
+        $has_explicit_description = array_key_exists( 'description', $raw_atts );
+
         $atts = shortcode_atts(
             [
                 'title' => '',
                 'description' => '',
                 'additional_class' => '',
+                'hide_title' => '0',
             ],
             $atts,
             self::SHORTCODE
         );
 
-        $title = self::resolve_title( $atts['title'] );
-        $description = self::resolve_description( $atts['description'] );
+        $shortcode_description = html_entity_decode( (string) $atts['description'], ENT_QUOTES, 'UTF-8' );
+        $title = ( $has_explicit_title && '' === trim( (string) $atts['title'] ) )
+            ? ''
+            : self::resolve_title( $atts['title'] );
+        $description = ( $has_explicit_description && '' === trim( $shortcode_description ) )
+            ? ''
+            : self::resolve_description( $shortcode_description );
+        $hide_title = self::is_truthy_shortcode_flag( $atts['hide_title'] );
         $additional_class = trim( (string) $atts['additional_class'] );
         $additional_class = '' !== $additional_class
             ? implode(
@@ -84,10 +95,30 @@ class National_Grid_Frontend {
                 'title' => $title,
                 'description' => $description,
                 'additional_class' => $additional_class,
+                'hide_title' => $hide_title,
                 'payload_json' => wp_json_encode( $payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ),
                 'live_heading' => self::build_live_heading( $chart_data ),
             ]
         );
+    }
+
+    /**
+     * Parses shortcode boolean-like attribute values.
+     *
+     * @param mixed $value Raw shortcode attribute value.
+     * @return bool
+     */
+    private static function is_truthy_shortcode_flag( $value ): bool {
+        if ( is_bool( $value ) ) {
+            return $value;
+        }
+
+        if ( is_int( $value ) || is_float( $value ) ) {
+            return (int) $value === 1;
+        }
+
+        $normalized = strtolower( trim( (string) $value ) );
+        return in_array( $normalized, [ '1', 'true', 'yes', 'on' ], true );
     }
 
     /**
