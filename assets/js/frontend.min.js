@@ -102,7 +102,7 @@
         var labelRadius = arc.outerRadius * 0.72;
         var x = arc.x + Math.cos(midAngle) * labelRadius;
         var y = arc.y + Math.sin(midAngle) * labelRadius;
-        ctx.fillText(percent.toFixed(1) + "%", x, y);
+        ctx.fillText(formatPercent(percent) + "%", x, y);
       });
 
       ctx.restore();
@@ -408,7 +408,7 @@
       "<div>Total: " +
       categoryTotal.toFixed(1) +
       " GW (" +
-      percent.toFixed(1) +
+      formatPercent(percent) +
       "% of total generation)</div>";
     tooltipNode.style.display = "block";
     positionBarAxisTooltip(widget, tooltipNode, event.clientX, event.clientY);
@@ -470,6 +470,24 @@
       var numeric = Number(value);
       return Number.isFinite(numeric) ? sum + numeric : sum;
     }, 0);
+  }
+
+  // Formats percentage for UI labels: 0 and 100 without decimals, otherwise 1 decimal.
+  function formatPercent(value) {
+    var numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return "0";
+    }
+
+    if (Math.abs(numeric) < 0.05) {
+      return "0";
+    }
+
+    if (Math.abs(100 - numeric) < 0.05) {
+      return "100";
+    }
+
+    return numeric.toFixed(1);
   }
 
   // Returns non-negative numeric component value from pie map.
@@ -585,7 +603,9 @@
         '<span class="national-grid-frontend-legend-swatch national-grid-frontend-legend-swatch-' +
         colorClass +
         '"></span>' +
+        '<span class="national-grid-frontend-legend-label">' +
         label +
+        "</span>" +
         "</span>";
     });
 
@@ -710,7 +730,7 @@
     var percentage = total > 0 ? (cleanTotal / total) * 100 : 0;
     headingNode.innerHTML =
       'Live Percentage Clean Power: <span class="national-grid-frontend-clean-power-value">' +
-      percentage.toFixed(1) +
+      formatPercent(percentage) +
       "%</span>";
   }
 
@@ -769,7 +789,7 @@
                   ": " +
                   value.toFixed(1) +
                   " GW (" +
-                  percent.toFixed(1) +
+                  formatPercent(percent) +
                   "%)"
                 );
               },
@@ -844,7 +864,7 @@
                   ": " +
                   safeValue.toFixed(1) +
                   " GW (" +
-                  percent.toFixed(1) +
+                  formatPercent(percent) +
                   "% of " +
                   categoryLabel +
                   ")"

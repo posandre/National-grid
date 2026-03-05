@@ -171,7 +171,7 @@ class National_Grid_Frontend {
                 'ajaxUrl' => admin_url( 'admin-ajax.php' ),
                 'action' => self::AJAX_ACTION,
                 'nonce' => wp_create_nonce( self::AJAX_NONCE_ACTION ),
-                'timeoutMinutes' => max( 1, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) ),
+                'timeoutMinutes' => max( 5, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) ),
                 'errorMessage' => __( 'Unable to refresh chart data.', 'national-grid' ),
                 'updatedAtLabel' => __( 'Updated (UTC): ', 'national-grid' ),
                 'noDataMessage' => __( 'No data available yet.', 'national-grid' ),

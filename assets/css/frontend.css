@@ -123,6 +123,11 @@
   gap: 6px;
   font-size: 12px;
   color: #334e68;
+  font-weight: 700;
+}
+
+.national-grid-frontend-legend-label {
+  font-weight: 700;
 }
 
 .national-grid-frontend-legend-swatch {

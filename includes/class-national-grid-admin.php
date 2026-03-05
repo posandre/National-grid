@@ -248,7 +248,7 @@ class National_Grid_Admin {
     public static function sanitize_timeout( $value ) {
         $value = absint( $value );
 
-        if ( $value <= 0 ) {
+        if ( $value < 5 ) {
             $value = 5;
         }
 
@@ -327,9 +327,9 @@ class National_Grid_Admin {
      * @return void
      */
     public static function render_timeout_field() {
-        $value = (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 );
+        $value = max( 5, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) );
         printf(
-            '<input type="number" name="%1$s" id="%1$s" value="%2$d" class="small-text" min="1" /> <span>%3$s</span>',
+            '<input type="number" name="%1$s" id="%1$s" value="%2$d" class="small-text" min="5" /> <span>%3$s</span>',
             esc_attr( NATIONAL_GRID_OPTION_TIMEOUT ),
             $value,
             esc_html__( 'minutes', 'national-grid' )
@@ -472,7 +472,7 @@ class National_Grid_Admin {
      * @return array<string, mixed>
      */
     public static function add_cron_schedule( $schedules ) {
-        $minutes = max( 1, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) );
+        $minutes = max( 5, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) );
         $schedules[ self::CRON_SCHEDULE ] = [
             'interval' => $minutes * MINUTE_IN_SECONDS,
             'display' => sprintf( __( 'National Grid every %d minutes', 'national-grid' ), $minutes ),
