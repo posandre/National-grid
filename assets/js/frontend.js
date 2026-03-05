@@ -203,6 +203,263 @@
     },
   };
 
+  // Escapes user-facing string fragments used in custom tooltip HTML.
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Returns stacked total for one X-axis category index.
+  function getBarCategoryTotal(chart, categoryIndex) {
+    if (!chart || !chart.data || !Array.isArray(chart.data.datasets)) {
+      return 0;
+    }
+
+    return chart.data.datasets.reduce(function (sum, dataset) {
+      var value = dataset && Array.isArray(dataset.data) ? Number(dataset.data[categoryIndex]) : 0;
+      return Number.isFinite(value) && value > 0 ? sum + value : sum;
+    }, 0);
+  }
+
+  // Returns total generation across all grouped bar categories.
+  function getBarTotalGeneration(chart) {
+    if (!chart || !chart.data || !Array.isArray(chart.data.datasets)) {
+      return 0;
+    }
+
+    return chart.data.datasets.reduce(function (sum, dataset) {
+      if (!dataset || !Array.isArray(dataset.data)) {
+        return sum;
+      }
+
+      return (
+        sum +
+        dataset.data.reduce(function (datasetSum, value) {
+          var numeric = Number(value);
+          return Number.isFinite(numeric) && numeric > 0 ? datasetSum + numeric : datasetSum;
+        }, 0)
+      );
+    }, 0);
+  }
+
+  // Creates an HTML tooltip node for bar X-axis label hover details.
+  function ensureBarAxisTooltipNode(widget) {
+    if (!widget) {
+      return null;
+    }
+
+    var existing = widget.querySelector(".national-grid-frontend-axis-tooltip");
+    if (existing) {
+      return existing;
+    }
+
+    var tooltipNode = document.createElement("div");
+    tooltipNode.className = "national-grid-frontend-axis-tooltip";
+    tooltipNode.style.position = "absolute";
+    tooltipNode.style.pointerEvents = "none";
+    tooltipNode.style.zIndex = "20";
+    tooltipNode.style.display = "none";
+    tooltipNode.style.minWidth = "300px";
+    tooltipNode.style.maxWidth = "300px";
+    tooltipNode.style.padding = "6px";
+    tooltipNode.style.background = "rgba(0, 0, 0, 0.8)";
+    tooltipNode.style.color = "#ffffff";
+    tooltipNode.style.borderRadius = "6px";
+    tooltipNode.style.fontSize = "12px";
+    tooltipNode.style.lineHeight = "1.4";
+    tooltipNode.style.whiteSpace = "nowrap";
+    tooltipNode.style.boxShadow = "none";
+
+    if (window.getComputedStyle(widget).position === "static") {
+      widget.style.position = "relative";
+    }
+    widget.appendChild(tooltipNode);
+
+    return tooltipNode;
+  }
+
+  // Hides X-axis label tooltip.
+  function hideBarAxisTooltip(tooltipNode) {
+    if (!tooltipNode) {
+      return;
+    }
+
+    tooltipNode.style.display = "none";
+  }
+
+  // Returns X-axis label index when pointer is over the label area.
+  function getXAxisLabelIndexFromPointer(chart, event) {
+    if (!chart || !chart.scales || !chart.scales.x || !chart.chartArea || !chart.canvas) {
+      return -1;
+    }
+
+    var xScale = chart.scales.x;
+    var labels = chart.data && Array.isArray(chart.data.labels) ? chart.data.labels : [];
+    if (!labels.length) {
+      return -1;
+    }
+
+    var rect = chart.canvas.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var y = event.clientY - rect.top;
+
+    // Trigger only in the horizontal-axis label region below the bars.
+    var labelZoneTop = chart.chartArea.bottom;
+    var labelZoneBottom = xScale.bottom + 26;
+    if (y < labelZoneTop || y > labelZoneBottom) {
+      return -1;
+    }
+
+    var closestIndex = -1;
+    var closestDistance = Number.POSITIVE_INFINITY;
+
+    labels.forEach(function (_label, index) {
+      var tickX = xScale.getPixelForTick(index);
+      var distance = Math.abs(tickX - x);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    if (closestIndex < 0) {
+      return -1;
+    }
+
+    var previousTick = closestIndex > 0 ? xScale.getPixelForTick(closestIndex - 1) : null;
+    var nextTick = closestIndex < labels.length - 1 ? xScale.getPixelForTick(closestIndex + 1) : null;
+    var halfSpacing = 30;
+    if (typeof previousTick === "number" && typeof nextTick === "number") {
+      halfSpacing = Math.min(Math.abs(nextTick - xScale.getPixelForTick(closestIndex)), Math.abs(xScale.getPixelForTick(closestIndex) - previousTick)) / 2;
+    } else if (typeof previousTick === "number") {
+      halfSpacing = Math.abs(xScale.getPixelForTick(closestIndex) - previousTick) / 2;
+    } else if (typeof nextTick === "number") {
+      halfSpacing = Math.abs(nextTick - xScale.getPixelForTick(closestIndex)) / 2;
+    }
+
+    return closestDistance <= Math.max(12, halfSpacing) ? closestIndex : -1;
+  }
+
+  // Positions tooltip near cursor and keeps it within widget bounds.
+  function positionBarAxisTooltip(widget, tooltipNode, clientX, clientY) {
+    var widgetRect = widget.getBoundingClientRect();
+    var left = clientX - widgetRect.left + 12;
+    var top = clientY - widgetRect.top + 12;
+
+    var tooltipWidth = tooltipNode.offsetWidth;
+    var tooltipHeight = tooltipNode.offsetHeight;
+    var maxLeft = widget.clientWidth - tooltipWidth - 8;
+    var maxTop = widget.clientHeight - tooltipHeight - 8;
+
+    tooltipNode.style.left = Math.max(8, Math.min(left, maxLeft)) + "px";
+    tooltipNode.style.top = Math.max(8, Math.min(top, maxTop)) + "px";
+  }
+
+  // Normalizes mouse/touch/pointer event into client coordinates.
+  function getClientPoint(event) {
+    if (!event) {
+      return null;
+    }
+
+    if (typeof event.clientX === "number" && typeof event.clientY === "number") {
+      return {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
+    }
+
+    if (event.touches && event.touches.length) {
+      return {
+        clientX: event.touches[0].clientX,
+        clientY: event.touches[0].clientY,
+      };
+    }
+
+    if (event.changedTouches && event.changedTouches.length) {
+      return {
+        clientX: event.changedTouches[0].clientX,
+        clientY: event.changedTouches[0].clientY,
+      };
+    }
+
+    return null;
+  }
+
+  // Renders tooltip content for hovered bar-category label.
+  function showBarAxisTooltip(widget, chart, tooltipNode, categoryIndex, event) {
+    if (!chart || !tooltipNode) {
+      return;
+    }
+
+    var labels = chart.data && Array.isArray(chart.data.labels) ? chart.data.labels : [];
+    var label = typeof labels[categoryIndex] === "string" ? labels[categoryIndex] : "";
+    var categoryTotal = getBarCategoryTotal(chart, categoryIndex);
+    var totalGeneration = getBarTotalGeneration(chart);
+    var percent = totalGeneration > 0 ? (categoryTotal / totalGeneration) * 100 : 0;
+
+    tooltipNode.innerHTML =
+      '<div style="font-weight:700; margin-bottom:4px;">' +
+      escapeHtml(label) +
+      "</div>" +
+      "<div>Total: " +
+      categoryTotal.toFixed(1) +
+      " GW (" +
+      percent.toFixed(1) +
+      "% of total generation)</div>";
+    tooltipNode.style.display = "block";
+    positionBarAxisTooltip(widget, tooltipNode, event.clientX, event.clientY);
+  }
+
+  // Attaches hover listeners to show category totals when hovering X labels.
+  function attachBarAxisLabelTooltip(widget, chart) {
+    if (!widget || !chart || !chart.canvas) {
+      return;
+    }
+
+    var tooltipNode = ensureBarAxisTooltipNode(widget);
+    if (!tooltipNode) {
+      return;
+    }
+
+    var handlePointerLikeMove = function (event) {
+      var point = getClientPoint(event);
+      if (!point) {
+        hideBarAxisTooltip(tooltipNode);
+        return;
+      }
+
+      var normalizedEvent = {
+        clientX: point.clientX,
+        clientY: point.clientY,
+      };
+      var categoryIndex = getXAxisLabelIndexFromPointer(chart, normalizedEvent);
+      if (categoryIndex < 0) {
+        hideBarAxisTooltip(tooltipNode);
+        return;
+      }
+
+      showBarAxisTooltip(widget, chart, tooltipNode, categoryIndex, normalizedEvent);
+    };
+
+    chart.canvas.addEventListener("mousemove", handlePointerLikeMove);
+    chart.canvas.addEventListener("touchstart", handlePointerLikeMove, { passive: true });
+    chart.canvas.addEventListener("touchmove", handlePointerLikeMove, { passive: true });
+
+    chart.canvas.addEventListener("mouseleave", function () {
+      hideBarAxisTooltip(tooltipNode);
+    });
+    chart.canvas.addEventListener("touchend", function () {
+      hideBarAxisTooltip(tooltipNode);
+    });
+    chart.canvas.addEventListener("touchcancel", function () {
+      hideBarAxisTooltip(tooltipNode);
+    });
+  }
+
   // Sums numeric dataset values, skipping non-finite entries.
   function getDatasetTotal(dataset) {
     if (!dataset || !Array.isArray(dataset.data)) {
@@ -536,7 +793,7 @@
       return null;
     }
 
-    return new window.Chart(canvas, {
+    var chart = new window.Chart(canvas, {
       type: "bar",
       data: barData,
       options: {
@@ -570,10 +827,28 @@
           },
           tooltip: {
             callbacks: {
+              title: function () {
+                return "";
+              },
               label: function (context) {
                 var value = Number(context.raw);
                 var safeValue = Number.isFinite(value) ? value : 0;
-                return (context.dataset.label || "") + ": " + safeValue.toFixed(1) + " GW";
+                var categoryTotal = getBarCategoryTotal(context.chart, context.dataIndex);
+                var percent = categoryTotal > 0 ? (safeValue / categoryTotal) * 100 : 0;
+                var labels = context.chart && context.chart.data && Array.isArray(context.chart.data.labels)
+                  ? context.chart.data.labels
+                  : [];
+                var categoryLabel = typeof labels[context.dataIndex] === "string" ? labels[context.dataIndex] : "Category";
+                return (
+                  (context.dataset.label || "") +
+                  ": " +
+                  safeValue.toFixed(1) +
+                  " GW (" +
+                  percent.toFixed(1) +
+                  "% of " +
+                  categoryLabel +
+                  ")"
+                );
               },
             },
           },
@@ -581,6 +856,9 @@
       },
       plugins: [barSegmentLabelsPlugin],
     });
+
+    attachBarAxisLabelTooltip(widget, chart);
+    return chart;
   }
 
   // Updates pie chart data and returns associated point timestamp.
