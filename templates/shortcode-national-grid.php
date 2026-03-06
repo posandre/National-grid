@@ -7,7 +7,6 @@
  * @var string $description
  * @var string $additional_class
  * @var bool $hide_title
- * @var string $payload_json
  * @var string $live_heading
  */
 
@@ -40,7 +39,11 @@ if ( ! defined( 'ABSPATH' ) ) {
             </div>
             <div class="national-grid-frontend-legend" aria-label="<?php esc_attr_e( 'Chart legend', 'national-grid' ); ?>"></div>
             <div class="national-grid-frontend-status" aria-live="polite"></div>
+            <noscript>
+                <p class="national-grid-frontend-status">
+                    <?php esc_html_e( 'JavaScript is required to load live National Grid charts.', 'national-grid' ); ?>
+                </p>
+            </noscript>
         </div>
     </div>
-    <script type="application/json" class="national-grid-frontend-payload"><?php echo (string) $payload_json; ?></script>
 </div>

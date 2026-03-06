@@ -648,9 +648,13 @@
       return;
     }
     var hasText = typeof text === "string" && text.trim() !== "";
+    var loadingText = typeof config.loadingMessage === "string" ? config.loadingMessage : "";
+    var isLoading = hasText && !isError && text === loadingText;
     statusNode.textContent = hasText ? text : "";
     statusNode.classList.toggle("is-hidden", !hasText);
     statusNode.classList.toggle("is-error", !!isError);
+    statusNode.classList.toggle("is-loading", isLoading);
+    widget.classList.toggle("is-loading", isLoading);
   }
 
   // Parses UTC timestamp string from backend payload.
@@ -980,6 +984,7 @@
       .fetch(config.ajaxUrl, {
         method: "POST",
         body: formData,
+        cache: "no-store",
         credentials: "same-origin",
       })
       .then(function (response) {
@@ -991,6 +996,7 @@
         }
 
         var nextData = response.data.data || {};
+        var hasRenderableData = !!buildPieData(nextData) || !!buildBarData(nextData);
         if (!chartState.pieChart) {
           chartState.pieChart = createPieChart(widget, nextData);
         } else {
@@ -1011,7 +1017,11 @@
         renderCleanPowerHeading(widget, nextData);
         renderSharedLegend(widget, nextData);
 
-        renderStatus(widget, "", false);
+        if (hasRenderableData) {
+          renderStatus(widget, "", false);
+        } else {
+          renderStatus(widget, config.noDataMessage, false);
+        }
       })
       .catch(function () {
         renderStatus(widget, config.errorMessage, true);
@@ -1020,41 +1030,19 @@
 
   // Initializes charts and periodic refresh for each widget instance.
   widgets.forEach(function (widget) {
-    var payloadNode = widget.querySelector(".national-grid-frontend-payload");
-    if (!payloadNode) {
-      return;
-    }
-
-    var payload;
-    try {
-      payload = JSON.parse(payloadNode.textContent || "{}");
-    } catch (error) {
-      renderStatus(widget, config.errorMessage, true);
-      return;
-    }
-
-    var chartData = payload && payload.chartData ? payload.chartData : {};
     var chartState = {
-      pieChart: createPieChart(widget, chartData),
-      barChart: createBarChart(widget, chartData),
-      lastPointTime:
-        typeof chartData.update_started_at_utc === "string"
-          ? chartData.update_started_at_utc
-          : "",
+      pieChart: null,
+      barChart: null,
+      lastPointTime: "",
     };
 
-    renderSharedLegend(widget, chartData);
+    renderSharedLegend(widget, {});
     renderLiveHeading(widget, chartState.lastPointTime);
-    renderCleanPowerHeading(widget, chartData);
-
-    if (chartState.pieChart || chartState.barChart) {
-      renderLiveHeading(widget, chartState.lastPointTime);
-      renderStatus(widget, "", false);
-    } else {
-      renderStatus(widget, config.noDataMessage, false);
-    }
+    renderCleanPowerHeading(widget, {});
+    renderStatus(widget, config.loadingMessage || config.noDataMessage, false);
 
     var intervalMinutes = parseInt(config.timeoutMinutes, 10) || 5;
+    fetchData(widget, chartState);
     // Keeps widget data fresh using backend-configured refresh interval.
     window.setInterval(function () {
       fetchData(widget, chartState);

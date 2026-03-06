@@ -33,7 +33,7 @@ class National_Grid_Frontend {
     }
 
     /**
-     * Renders shortcode output with initial chart payload.
+     * Renders shortcode output shell for AJAX-driven chart loading.
      *
      * @param array<string, mixed> $atts Shortcode attributes.
      * @return string
@@ -79,14 +79,7 @@ class National_Grid_Frontend {
                 )
             )
             : '';
-        $chart_data = self::get_chart_data();
         $instance_id = 'national-grid-frontend-' . self::$instance_counter;
-
-        $payload = [
-            'title' => $title,
-            'description' => $description,
-            'chartData' => $chart_data,
-        ];
 
         return self::render_template(
             'shortcode-national-grid.php',
@@ -96,8 +89,7 @@ class National_Grid_Frontend {
                 'description' => $description,
                 'additional_class' => $additional_class,
                 'hide_title' => $hide_title,
-                'payload_json' => wp_json_encode( $payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ),
-                'live_heading' => self::build_live_heading( $chart_data ),
+                'live_heading' => self::build_live_heading( [] ),
             ]
         );
     }
@@ -173,6 +165,7 @@ class National_Grid_Frontend {
                 'nonce' => wp_create_nonce( self::AJAX_NONCE_ACTION ),
                 'timeoutMinutes' => max( 5, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) ),
                 'errorMessage' => __( 'Unable to refresh chart data.', 'national-grid' ),
+                'loadingMessage' => __( 'Loading latest data...', 'national-grid' ),
                 'updatedAtLabel' => __( 'Updated (UTC): ', 'national-grid' ),
                 'noDataMessage' => __( 'No data available yet.', 'national-grid' ),
                 'todayLabel' => __( 'Today', 'national-grid' ),
@@ -191,7 +184,12 @@ class National_Grid_Frontend {
      * @return void
      */
     public static function handle_frontend_data_ajax() {
-        if ( ! check_ajax_referer( self::AJAX_NONCE_ACTION, 'nonce', false ) ) {
+        nocache_headers();
+        header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+        header( 'Pragma: no-cache' );
+        header( 'Expires: Wed, 11 Jan 1984 05:00:00 GMT' );
+
+        if ( is_user_logged_in() && ! check_ajax_referer( self::AJAX_NONCE_ACTION, 'nonce', false ) ) {
             wp_send_json_error(
                 [
                     'message' => __( 'Invalid request token.', 'national-grid' ),
