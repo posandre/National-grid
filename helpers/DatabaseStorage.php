@@ -11,6 +11,10 @@ class DatabaseStorage {
     private const STATUS_ERROR = 'error';
     /** Debug log filename in uploads directory. */
     private const DEBUG_LOG_FILENAME = 'national-grid-debug.log';
+    /** Maximum number of debug entries to keep in file. */
+    private const DEBUG_LOG_MAX_EVENTS = 3;
+    /** Maximum debug log file size in bytes. */
+    private const DEBUG_LOG_MAX_BYTES = 262144;
     /** Transient key used for short-lived frontend chart payload cache. */
     private const FRONTEND_CHART_TRANSIENT_KEY = 'national_grid_frontend_chart_data';
     /** Frontend chart payload cache lifetime in seconds. */
@@ -206,6 +210,67 @@ class DatabaseStorage {
 
         $content = "\n=== {$timestamp} | {$title} ===\n" . implode( "\n", $safe_lines ) . "\n";
         error_log( $content, 3, $path );
+        self::enforceDebugLogLimits( $path );
+    }
+
+    /**
+     * Enforces debug log retention limits.
+     *
+     * Keeps only the latest debug entries and caps total file size.
+     *
+     * @param string $path Debug log file path.
+     * @return void
+     */
+    private static function enforceDebugLogLimits( string $path ): void {
+        if ( ! file_exists( $path ) || ! is_readable( $path ) || ! is_writable( $path ) ) {
+            return;
+        }
+
+        $content = (string) file_get_contents( $path );
+        if ( '' === $content ) {
+            return;
+        }
+
+        $content = ltrim( $content, "\n" );
+        $entries = preg_split( '/(?=^=== .* ===$)/m', $content, -1, PREG_SPLIT_NO_EMPTY );
+        if ( ! is_array( $entries ) || [] === $entries ) {
+            return;
+        }
+
+        $entries = array_map(
+            static function ( $entry ) {
+                return rtrim( (string) $entry ) . "\n";
+            },
+            $entries
+        );
+
+        $entries = array_values( array_slice( $entries, -1 * self::DEBUG_LOG_MAX_EVENTS ) );
+
+        while ( count( $entries ) > 1 && strlen( implode( "\n", $entries ) ) > self::DEBUG_LOG_MAX_BYTES ) {
+            array_shift( $entries );
+        }
+
+        $single_entry = $entries[0];
+        if ( 1 === count( $entries ) && strlen( $single_entry ) > self::DEBUG_LOG_MAX_BYTES ) {
+            $header_end = strpos( $single_entry, "\n" );
+            if ( false === $header_end ) {
+                $entries[0] = substr( $single_entry, -1 * self::DEBUG_LOG_MAX_BYTES );
+            } else {
+                $header = substr( $single_entry, 0, $header_end + 1 );
+                $body = substr( $single_entry, $header_end + 1 );
+                $truncation_marker = "[truncated]\n";
+                $allowed_body_length = self::DEBUG_LOG_MAX_BYTES - strlen( $header ) - strlen( $truncation_marker );
+
+                if ( $allowed_body_length <= 0 ) {
+                    $entries[0] = substr( $single_entry, -1 * self::DEBUG_LOG_MAX_BYTES );
+                } else {
+                    $entries[0] = $header . $truncation_marker . substr( $body, -1 * $allowed_body_length );
+                }
+            }
+        }
+
+        $final_content = implode( "\n", $entries );
+        file_put_contents( $path, ltrim( $final_content, "\n" ) );
     }
 
     /**

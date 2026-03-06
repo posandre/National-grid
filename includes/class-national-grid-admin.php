@@ -1232,6 +1232,17 @@ class National_Grid_Admin {
     private static function render_debug_log_with_api_links( string $content ): string {
         $escaped_content = esc_html( $content );
         $clickable_content = make_clickable( $escaped_content );
+        $clickable_content = (string) preg_replace_callback(
+            '/<a\s+([^>]+)>/i',
+            static function ( $matches ) {
+                $attributes = isset( $matches[1] ) ? (string) $matches[1] : '';
+                $attributes = (string) preg_replace( '/\s+target=(["\']).*?\1/i', '', $attributes );
+                $attributes = (string) preg_replace( '/\s+rel=(["\']).*?\1/i', '', $attributes );
+
+                return '<a ' . trim( $attributes ) . ' target="_blank" rel="noopener noreferrer">';
+            },
+            $clickable_content
+        );
 
         return (string) preg_replace(
             '/(<a [^>]*>https?:\/\/[^<]+<\/a>)/i',
