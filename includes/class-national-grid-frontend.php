@@ -132,12 +132,14 @@ class National_Grid_Frontend {
             return;
         }
         $asset_suffix = self::get_asset_suffix();
+        $style_relative_path = 'assets/css/frontend' . $asset_suffix . '.css';
+        $script_relative_path = 'assets/js/frontend' . $asset_suffix . '.js';
 
         wp_enqueue_style(
             'national-grid-frontend',
-            NATIONAL_GRID_PLUGIN_URL . 'assets/css/frontend' . $asset_suffix . '.css',
+            NATIONAL_GRID_PLUGIN_URL . $style_relative_path,
             [],
-            NATIONAL_GRID_VERSION
+            self::get_asset_version( $style_relative_path )
         );
 
         wp_enqueue_script(
@@ -150,9 +152,9 @@ class National_Grid_Frontend {
 
         wp_enqueue_script(
             'national-grid-frontend',
-            NATIONAL_GRID_PLUGIN_URL . 'assets/js/frontend' . $asset_suffix . '.js',
+            NATIONAL_GRID_PLUGIN_URL . $script_relative_path,
             [ 'national-grid-chart-js' ],
-            NATIONAL_GRID_VERSION,
+            self::get_asset_version( $script_relative_path ),
             true
         );
 
@@ -273,6 +275,24 @@ class National_Grid_Frontend {
             || ( defined( 'WP_DEBUG' ) && WP_DEBUG );
 
         return $is_debug ? '' : '.min';
+    }
+
+    /**
+     * Returns asset version derived from local file mtime when available.
+     *
+     * @param string $relative_path Plugin-relative asset path.
+     * @return string
+     */
+    private static function get_asset_version( string $relative_path ): string {
+        $full_path = NATIONAL_GRID_PLUGIN_DIR . ltrim( $relative_path, '/\\' );
+        if ( is_string( $full_path ) && file_exists( $full_path ) ) {
+            $mtime = filemtime( $full_path );
+            if ( false !== $mtime ) {
+                return (string) $mtime;
+            }
+        }
+
+        return NATIONAL_GRID_VERSION;
     }
 
     /**
