@@ -866,6 +866,9 @@
             },
             ticks: {
               align: "center",
+              font: {
+                size: isMobileViewport ? 10 : 12,
+              },
               minRotation: 0,
               maxRotation: 0,
               autoSkip: false,
@@ -910,10 +913,16 @@
             stacked: true,
             beginAtZero: true,
             display: true,
+            ticks: {
+              font: {
+                size: isMobileViewport ? 10 : 12,
+              },
+            },
             title: {
               display: true,
               text: "Live Generation (GW)",
               font: {
+                size: isMobileViewport ? 10 : 12,
                 weight: "700",
               },
               color: "#000000"
