@@ -177,6 +177,7 @@ function national_grid_activate() {
     }
 
     national_grid_create_tables();
+    National_Grid_Admin::schedule_initial_update_event();
 }
 register_activation_hook( __FILE__, 'national_grid_activate' );
 

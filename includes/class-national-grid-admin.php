@@ -17,6 +17,8 @@ class National_Grid_Admin {
     private const CLEAR_DEBUG_LOG_ACTION = 'national_grid_clear_debug_log';
     /** Cron hook name for scheduled data updates. */
     private const CRON_HOOK = 'national_grid_cron_update_data';
+    /** Single cron hook name for initial data update after plugin activation. */
+    private const INITIAL_CRON_HOOK = 'national_grid_cron_initial_update_data';
     /** Custom cron schedule key based on configured timeout. */
     private const CRON_SCHEDULE = 'national_grid_custom_interval';
     /** Cron hook name for scheduled plugin log cleanup. */
@@ -45,6 +47,7 @@ class National_Grid_Admin {
         add_action( 'init', [ __CLASS__, 'maybe_sync_cron_event' ] );
         add_action( 'init', [ __CLASS__, 'maybe_sync_log_clear_cron_event' ] );
         add_action( self::CRON_HOOK, [ __CLASS__, 'handle_cron_update' ] );
+        add_action( self::INITIAL_CRON_HOOK, [ __CLASS__, 'handle_initial_cron_update' ] );
         add_action( self::LOG_CLEAR_CRON_HOOK, [ __CLASS__, 'handle_cron_clear_log' ] );
     }
 
@@ -544,11 +547,32 @@ class National_Grid_Admin {
             $timestamp = wp_next_scheduled( self::CRON_HOOK );
         }
 
+        $timestamp = wp_next_scheduled( self::INITIAL_CRON_HOOK );
+        while ( false !== $timestamp ) {
+            wp_unschedule_event( $timestamp, self::INITIAL_CRON_HOOK );
+            $timestamp = wp_next_scheduled( self::INITIAL_CRON_HOOK );
+        }
+
         $timestamp = wp_next_scheduled( self::LOG_CLEAR_CRON_HOOK );
         while ( false !== $timestamp ) {
             wp_unschedule_event( $timestamp, self::LOG_CLEAR_CRON_HOOK );
             $timestamp = wp_next_scheduled( self::LOG_CLEAR_CRON_HOOK );
         }
+    }
+
+    /**
+     * Schedules one-time initial data update after plugin activation.
+     *
+     * @return void
+     */
+    public static function schedule_initial_update_event(): void {
+        $has_recurring = false !== wp_next_scheduled( self::CRON_HOOK );
+        $has_initial = false !== wp_next_scheduled( self::INITIAL_CRON_HOOK );
+        if ( $has_recurring || $has_initial ) {
+            return;
+        }
+
+        wp_schedule_single_event( time() + 30, self::INITIAL_CRON_HOOK );
     }
 
     /**
@@ -558,6 +582,33 @@ class National_Grid_Admin {
      */
     public static function handle_cron_update() {
         self::update_data( 'cron' );
+    }
+
+    /**
+     * Runs one-time data update scheduled on plugin activation.
+     *
+     * @return void
+     */
+    public static function handle_initial_cron_update() {
+        if ( DatabaseStorage::isLogEnabled() ) {
+            DatabaseStorage::logSuccess(
+                'activation',
+                'Initial update started (scheduled on plugin activation).'
+            );
+        }
+
+        if ( DatabaseStorage::isDebugModeEnabled() ) {
+            DatabaseStorage::appendDebugLog(
+                'Initial update trigger',
+                [
+                    'Timestamp: ' . gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+                    'Source: activation',
+                    'Reason: Scheduled one-time run after plugin activation.',
+                ]
+            );
+        }
+
+        self::update_data( 'activation' );
     }
 
     /**
@@ -604,7 +655,7 @@ class National_Grid_Admin {
      * @return array<string, mixed>
      */
     public static function update_data( $source = 'manual' ) {
-        $source = in_array( $source, [ 'manual', 'cron' ], true ) ? $source : 'manual';
+        $source = in_array( $source, [ 'manual', 'cron', 'activation' ], true ) ? $source : 'manual';
 
         try {
             $generation_update_result = Generation::update();
