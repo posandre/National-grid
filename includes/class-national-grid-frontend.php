@@ -322,8 +322,8 @@ class National_Grid_Frontend {
      */
     private static function build_live_heading( array $chart_data ) {
         $time = '';
-        if ( isset( $chart_data['update_finished_at_utc'] ) ) {
-            $time = (string) $chart_data['update_finished_at_utc'];
+        if ( isset( $chart_data['update_started_at_utc'] ) ) {
+            $time = (string) $chart_data['update_started_at_utc'];
         }
 
         if ( '' === $time ) {

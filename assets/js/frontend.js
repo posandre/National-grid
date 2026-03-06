@@ -1060,8 +1060,8 @@
         }
 
         chartState.lastPointTime =
-          typeof nextData.update_finished_at_utc === "string"
-            ? nextData.update_finished_at_utc
+          typeof nextData.update_started_at_utc === "string"
+            ? nextData.update_started_at_utc
             : "";
         renderLiveHeading(widget, chartState.lastPointTime);
         renderCleanPowerHeading(widget, nextData);
@@ -1072,54 +1072,10 @@
         } else {
           renderStatus(widget, config.noDataMessage, false);
         }
-
-        return chartState.lastPointTime;
       })
       .catch(function () {
         renderStatus(widget, config.errorMessage, true);
-        throw new Error(config.errorMessage);
       });
-  }
-
-  // Returns milliseconds until next refresh anchored to latest update timestamp.
-  function getDelayUntilNextRefresh(lastPointTime) {
-    var intervalMinutes = parseInt(config.timeoutMinutes, 10) || 5;
-    var intervalMs = intervalMinutes * 60 * 1000;
-    var startOffsetMs = 60 * 1000;
-    var date = parseUtcDateTime(lastPointTime);
-    if (!date) {
-      return intervalMs;
-    }
-
-    var now = Date.now();
-    var updateTs = date.getTime() + startOffsetMs;
-    if (updateTs >= now) {
-      return Math.max(1000, updateTs - now);
-    }
-
-    var elapsed = now - updateTs;
-    var remainder = elapsed % intervalMs;
-    var delay = remainder === 0 ? intervalMs : intervalMs - remainder;
-    return Math.max(1000, delay);
-  }
-
-  // Schedules the next fetch relative to the latest update timestamp.
-  function scheduleNextFetch(widget, chartState, lastPointTime) {
-    if (chartState.nextFetchTimerId) {
-      window.clearTimeout(chartState.nextFetchTimerId);
-      chartState.nextFetchTimerId = 0;
-    }
-
-    var delay = getDelayUntilNextRefresh(lastPointTime);
-    chartState.nextFetchTimerId = window.setTimeout(function () {
-      fetchData(widget, chartState)
-        .then(function (nextLastPointTime) {
-          scheduleNextFetch(widget, chartState, nextLastPointTime);
-        })
-        .catch(function () {
-          scheduleNextFetch(widget, chartState, "");
-        });
-    }, delay);
   }
 
   // Initializes charts and periodic refresh for each widget instance.
@@ -1128,7 +1084,6 @@
       pieChart: null,
       barChart: null,
       lastPointTime: "",
-      nextFetchTimerId: 0,
     };
 
     renderSharedLegend(widget, {});
@@ -1136,12 +1091,11 @@
     renderCleanPowerHeading(widget, {});
     renderStatus(widget, config.loadingMessage || config.noDataMessage, false);
 
-    fetchData(widget, chartState)
-      .then(function (lastPointTime) {
-        scheduleNextFetch(widget, chartState, lastPointTime);
-      })
-      .catch(function () {
-        scheduleNextFetch(widget, chartState, "");
-      });
+    var intervalMinutes = parseInt(config.timeoutMinutes, 10) || 5;
+    fetchData(widget, chartState);
+    // Keeps widget data fresh using backend-configured refresh interval.
+    window.setInterval(function () {
+      fetchData(widget, chartState);
+    }, intervalMinutes * 60 * 1000);
   });
 })();
