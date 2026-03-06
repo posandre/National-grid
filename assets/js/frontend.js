@@ -132,7 +132,7 @@
         return;
       }
 
-      var innerCircleRadius = outerRadius * 0.45;
+      var innerCircleRadius = outerRadius * 0.52;
       var ctx = chart.ctx;
       ctx.save();
       ctx.beginPath();
@@ -291,17 +291,15 @@
     tooltipNode.style.display = "none";
   }
 
-  // Ensures only one custom X-axis tooltip is visible across all widgets.
-  function hideOtherBarAxisTooltips(activeTooltipNode) {
+  // Closes all custom X-axis tooltips across widgets.
+  function hideOtherBarAxisTooltips() {
     var tooltipNodes = document.querySelectorAll(".national-grid-frontend-axis-tooltip");
     if (!tooltipNodes.length) {
       return;
     }
 
     tooltipNodes.forEach(function (node) {
-      if (node !== activeTooltipNode) {
-        node.style.display = "none";
-      }
+      node.style.display = "none";
     });
   }
 
@@ -424,7 +422,19 @@
       " GW (" +
       formatPercent(percent) +
       "% of total generation)</div>";
-    hideOtherBarAxisTooltips(tooltipNode);
+
+    // Always close any previously open tooltips before showing the next one.
+    hideOtherBarAxisTooltips();
+    if (typeof chart.setActiveElements === "function") {
+      chart.setActiveElements([]);
+    }
+    if (chart.tooltip && typeof chart.tooltip.setActiveElements === "function") {
+      chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+    }
+    if (typeof chart.update === "function") {
+      chart.update("none");
+    }
+
     tooltipNode.style.display = "block";
     positionBarAxisTooltip(widget, tooltipNode, event.clientX, event.clientY);
   }
@@ -776,7 +786,7 @@
         responsive: true,
         maintainAspectRatio: false,
         animation: CHART_ANIMATION,
-        cutout: "45%",
+        cutout: "52%",
         interaction: {
           mode: "nearest",
           intersect: true,
@@ -826,6 +836,11 @@
       return null;
     }
 
+    var isMobileViewport =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(max-width: 767px)").matches;
+
     var chart = new window.Chart(canvas, {
       type: "bar",
       data: barData,
@@ -854,6 +869,15 @@
             },
           },
         },
+        datasets: isMobileViewport
+          ? {
+              bar: {
+                // Keep bars wide on mobile but preserve a small gap between columns.
+                categoryPercentage: 0.93,
+                barPercentage: 1,
+              },
+            }
+          : {},
         plugins: {
           legend: {
             display: false,
