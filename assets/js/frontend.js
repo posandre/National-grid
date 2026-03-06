@@ -467,9 +467,7 @@
     chart.canvas.addEventListener("mouseleave", function () {
       hideBarAxisTooltip(tooltipNode);
     });
-    chart.canvas.addEventListener("touchend", function () {
-      hideBarAxisTooltip(tooltipNode);
-    });
+    // Keep tooltip visible after tap; it closes on a different touch target or cancellation.
     chart.canvas.addEventListener("touchcancel", function () {
       hideBarAxisTooltip(tooltipNode);
     });
