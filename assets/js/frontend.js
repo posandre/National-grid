@@ -563,11 +563,6 @@
       labels: labels,
       values: values,
       colors: colors,
-      time:
-        chartData.latest_five_minutes &&
-        typeof chartData.latest_five_minutes.time === "string"
-          ? chartData.latest_five_minutes.time
-          : "",
     };
   }
 
@@ -929,10 +924,10 @@
     return chart;
   }
 
-  // Updates pie chart data and returns associated point timestamp.
+  // Updates pie chart data.
   function updatePieChart(chart, chartData) {
     if (!chart) {
-      return "";
+      return;
     }
 
     var pieData = buildPieData(chartData);
@@ -940,7 +935,7 @@
       chart.data.labels = [];
       chart.data.datasets = [{ data: [] }];
       chart.update();
-      return "";
+      return;
     }
 
     chart.data.labels = pieData.labels;
@@ -953,8 +948,6 @@
       },
     ];
     chart.update();
-
-    return pieData.time || "";
   }
 
   // Updates bar chart series from latest payload.
@@ -1001,7 +994,7 @@
         if (!chartState.pieChart) {
           chartState.pieChart = createPieChart(widget, nextData);
         } else {
-          chartState.lastPointTime = updatePieChart(chartState.pieChart, nextData);
+          updatePieChart(chartState.pieChart, nextData);
         }
 
         if (!chartState.barChart) {
@@ -1010,6 +1003,10 @@
           updateBarChart(chartState.barChart, nextData);
         }
 
+        chartState.lastPointTime =
+          typeof nextData.update_started_at_utc === "string"
+            ? nextData.update_started_at_utc
+            : "";
         renderLiveHeading(widget, chartState.lastPointTime);
         renderCleanPowerHeading(widget, nextData);
         renderSharedLegend(widget, nextData);
@@ -1040,7 +1037,10 @@
     var chartState = {
       pieChart: createPieChart(widget, chartData),
       barChart: createBarChart(widget, chartData),
-      lastPointTime: "",
+      lastPointTime:
+        typeof chartData.update_started_at_utc === "string"
+          ? chartData.update_started_at_utc
+          : "",
     };
 
     renderSharedLegend(widget, chartData);
@@ -1048,10 +1048,6 @@
     renderCleanPowerHeading(widget, chartData);
 
     if (chartState.pieChart || chartState.barChart) {
-      var initialPie = buildPieData(chartData);
-      if (initialPie && initialPie.time) {
-        chartState.lastPointTime = initialPie.time;
-      }
       renderLiveHeading(widget, chartState.lastPointTime);
       renderStatus(widget, "", false);
     } else {

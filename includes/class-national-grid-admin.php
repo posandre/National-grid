@@ -590,10 +590,14 @@ class National_Grid_Admin {
      * @return void
      */
     public static function handle_initial_cron_update() {
+        $started_at_utc = gmdate( 'Y-m-d H:i:s' );
+
         if ( DatabaseStorage::isLogEnabled() ) {
             DatabaseStorage::logSuccess(
                 'activation',
-                'Initial update started (scheduled on plugin activation).'
+                'Initial update started (scheduled on plugin activation).',
+                [],
+                $started_at_utc
             );
         }
 
@@ -601,14 +605,15 @@ class National_Grid_Admin {
             DatabaseStorage::appendDebugLog(
                 'Initial update trigger',
                 [
-                    'Timestamp: ' . gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+                    'Timestamp: ' . $started_at_utc . ' UTC',
                     'Source: activation',
                     'Reason: Scheduled one-time run after plugin activation.',
-                ]
+                ],
+                $started_at_utc
             );
         }
 
-        self::update_data( 'activation' );
+        self::update_data( 'activation', $started_at_utc );
     }
 
     /**
@@ -654,8 +659,15 @@ class National_Grid_Admin {
      * @param string $source Update source label.
      * @return array<string, mixed>
      */
-    public static function update_data( $source = 'manual' ) {
+    public static function update_data( $source = 'manual', $started_at_utc = '' ) {
         $source = in_array( $source, [ 'manual', 'cron', 'activation' ], true ) ? $source : 'manual';
+        $started_at_utc = DatabaseStorage::normalizeUtcTimestamp( $started_at_utc );
+        if ( '' === $started_at_utc ) {
+            $started_at_utc = gmdate( 'Y-m-d H:i:s' );
+        }
+
+        update_option( NATIONAL_GRID_OPTION_LAST_UPDATE_STARTED_AT, $started_at_utc, false );
+        DatabaseStorage::setDebugTimestampContext( $started_at_utc );
 
         try {
             $generation_update_result = Generation::update();
@@ -664,7 +676,7 @@ class National_Grid_Admin {
                 || ! isset( $generation_update_result['rows_written'], $generation_update_result['rows_aggregated'], $generation_update_result['rows_deleted'] )
             ) {
                 if ( DatabaseStorage::isLogEnabled() ) {
-                    DatabaseStorage::logError( $source, 'Generation update failed.', [ 'generation_result' => $generation_update_result ] );
+                    DatabaseStorage::logError( $source, 'Generation update failed.', [ 'generation_result' => $generation_update_result ], $started_at_utc );
                 }
                 return [
                     'success' => false,
@@ -679,7 +691,7 @@ class National_Grid_Admin {
                 || ! isset( $demand_update_result['rows_written'], $demand_update_result['rows_deleted'], $demand_update_result['read'], $demand_update_result['valid'], $demand_update_result['skipped'] )
             ) {
                 if ( DatabaseStorage::isLogEnabled() ) {
-                    DatabaseStorage::logError( $source, 'Demand update failed.', [ 'demand_result' => $demand_update_result ] );
+                    DatabaseStorage::logError( $source, 'Demand update failed.', [ 'demand_result' => $demand_update_result ], $started_at_utc );
                 }
                 return [
                     'success' => false,
@@ -694,7 +706,8 @@ class National_Grid_Admin {
                     [
                         'generation' => $generation_update_result,
                         'demand' => $demand_update_result,
-                    ]
+                    ],
+                    $started_at_utc
                 );
             }
 
@@ -702,13 +715,14 @@ class National_Grid_Admin {
                 DatabaseStorage::appendDebugLog(
                     'Update cycle summary',
                     [
-                        'Timestamp: ' . gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+                        'Timestamp: ' . $started_at_utc . ' UTC',
                         'Source: ' . $source,
                         'Generation update result:',
                         wp_json_encode( $generation_update_result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ),
                         'Demand update result:',
                         wp_json_encode( $demand_update_result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ),
-                    ]
+                    ],
+                    $started_at_utc
                 );
                 DatabaseStorage::logChartComputationDebug();
             }
@@ -725,7 +739,8 @@ class National_Grid_Admin {
                     [
                         'exception' => get_class( $e ),
                         'previous' => $e->getPrevious() ? $e->getPrevious()->getMessage() : '',
-                    ]
+                    ],
+                    $started_at_utc
                 );
             }
 
@@ -741,7 +756,8 @@ class National_Grid_Admin {
                     [
                         'exception' => get_class( $e ),
                         'message' => $e->getMessage(),
-                    ]
+                    ],
+                    $started_at_utc
                 );
             }
 
@@ -749,6 +765,8 @@ class National_Grid_Admin {
                 'success' => false,
                 'message' => __( 'Update failed. Check log for details.', 'national-grid' ),
             ];
+        } finally {
+            DatabaseStorage::setDebugTimestampContext();
         }
     }
 

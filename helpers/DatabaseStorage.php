@@ -17,6 +17,8 @@ class DatabaseStorage {
     private const FRONTEND_CHART_TRANSIENT_KEY = 'national_grid_frontend_chart_data';
     /** Frontend chart payload cache lifetime in seconds. */
     private const FRONTEND_CHART_TRANSIENT_TTL = 60;
+    /** Optional fixed UTC timestamp shared across debug log entries for one update run. */
+    private static $debug_timestamp_context = '';
     /** Maps frontend pie labels to storage columns used for aggregation. */
     private const FRONTEND_PIE_MAPPING = [
         'Gas' => [
@@ -68,8 +70,8 @@ class DatabaseStorage {
      * @param array<string, mixed> $context Additional context payload.
      * @return bool
      */
-    public static function logSuccess( $source, $message, array $context = [] ) {
-        return self::logEvent( $source, self::STATUS_SUCCESS, $message, $context );
+    public static function logSuccess( $source, $message, array $context = [], $created_at = '' ) {
+        return self::logEvent( $source, self::STATUS_SUCCESS, $message, $context, $created_at );
     }
 
     /**
@@ -80,8 +82,8 @@ class DatabaseStorage {
      * @param array<string, mixed> $context Additional context payload.
      * @return bool
      */
-    public static function logError( $source, $message, array $context = [] ) {
-        return self::logEvent( $source, self::STATUS_ERROR, $message, $context );
+    public static function logError( $source, $message, array $context = [], $created_at = '' ) {
+        return self::logEvent( $source, self::STATUS_ERROR, $message, $context, $created_at );
     }
 
     /**
@@ -93,18 +95,23 @@ class DatabaseStorage {
      * @param array<string, mixed> $context Additional context payload.
      * @return bool
      */
-    public static function logEvent( $source, $status, $message, array $context = [] ) {
+    public static function logEvent( $source, $status, $message, array $context = [], $created_at = '' ) {
         if ( ! self::isLogEnabled() ) {
             return true;
         }
 
         global $wpdb;
 
+        $safe_created_at = self::normalizeUtcTimestamp( $created_at );
+        if ( '' === $safe_created_at ) {
+            $safe_created_at = gmdate( 'Y-m-d H:i:s' );
+        }
+
         $table_name = self::getLogsTableName();
         $result = $wpdb->insert(
             $table_name,
             [
-                'created_at' => gmdate( 'Y-m-d H:i:s' ),
+                'created_at' => $safe_created_at,
                 'source' => sanitize_key( (string) $source ),
                 'status' => sanitize_key( (string) $status ),
                 'message' => sanitize_text_field( (string) $message ),
@@ -185,19 +192,35 @@ class DatabaseStorage {
     }
 
     /**
+     * Sets/clears shared UTC timestamp used for debug log headers.
+     *
+     * @param string $timestamp UTC timestamp in Y-m-d H:i:s format.
+     * @return void
+     */
+    public static function setDebugTimestampContext( string $timestamp = '' ): void {
+        self::$debug_timestamp_context = self::normalizeUtcTimestamp( $timestamp );
+    }
+
+    /**
      * Appends formatted debug entry to plugin debug log file.
      *
      * @param string $title Debug block title.
      * @param array<int, string> $lines Debug lines.
      * @return void
      */
-    public static function appendDebugLog( string $title, array $lines ): void {
+    public static function appendDebugLog( string $title, array $lines, string $timestamp = '' ): void {
         if ( ! self::isDebugModeEnabled() ) {
             return;
         }
 
         $path = self::getDebugLogPath();
-        $timestamp = gmdate( 'Y-m-d H:i:s' ) . ' UTC';
+        $safe_timestamp = self::normalizeUtcTimestamp( $timestamp );
+        if ( '' === $safe_timestamp ) {
+            $safe_timestamp = self::$debug_timestamp_context;
+        }
+        if ( '' === $safe_timestamp ) {
+            $safe_timestamp = gmdate( 'Y-m-d H:i:s' );
+        }
         $safe_lines = array_map(
             static function ( $line ) {
                 return (string) $line;
@@ -206,9 +229,28 @@ class DatabaseStorage {
         );
         $safe_lines = self::normalizeDebugLines( $safe_lines );
 
-        $content = "\n=== {$timestamp} | {$title} ===\n" . implode( "\n", $safe_lines ) . "\n";
+        $content = "\n=== {$safe_timestamp} UTC | {$title} ===\n" . implode( "\n", $safe_lines ) . "\n";
         error_log( $content, 3, $path );
         self::enforceDebugLogLimits( $path );
+    }
+
+    /**
+     * Validates UTC timestamp format used across plugin logs.
+     *
+     * @param mixed $value Timestamp candidate.
+     * @return string
+     */
+    public static function normalizeUtcTimestamp( $value ): string {
+        if ( ! is_string( $value ) ) {
+            return '';
+        }
+
+        $value = trim( $value );
+        if ( '' === $value ) {
+            return '';
+        }
+
+        return preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value ) ? $value : '';
     }
 
     /**
@@ -1134,6 +1176,7 @@ class DatabaseStorage {
             'latest' => $latest_half_hour,
             'latest_five_minutes' => $latest_five_minutes,
             'latest_half_hour' => $latest_half_hour,
+            'update_started_at_utc' => (string) get_option( NATIONAL_GRID_OPTION_LAST_UPDATE_STARTED_AT, '' ),
             'pie' => $pie
         ];
 
