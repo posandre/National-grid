@@ -666,7 +666,6 @@ class National_Grid_Admin {
             $started_at_utc = gmdate( 'Y-m-d H:i:s' );
         }
 
-        update_option( NATIONAL_GRID_OPTION_LAST_UPDATE_STARTED_AT, $started_at_utc, false );
         DatabaseStorage::setDebugTimestampContext( $started_at_utc );
 
         try {
@@ -726,6 +725,9 @@ class National_Grid_Admin {
                 );
                 DatabaseStorage::logChartComputationDebug();
             }
+
+            $finished_at_utc = gmdate( 'Y-m-d H:i:s' );
+            update_option( NATIONAL_GRID_OPTION_LAST_UPDATE_FINISHED_AT, $finished_at_utc, false );
 
             return [
                 'success' => true,

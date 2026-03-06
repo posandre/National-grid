@@ -38,6 +38,8 @@ define( 'NATIONAL_GRID_OPTION_CHART_ANIMATION', 'national_grid_chart_animation' 
 define( 'NATIONAL_GRID_OPTION_DEBUG_MODE', 'national_grid_debug_mode' );
 // Option name for UTC timestamp when the latest update run started.
 define( 'NATIONAL_GRID_OPTION_LAST_UPDATE_STARTED_AT', 'national_grid_last_update_started_at' );
+// Option name for UTC timestamp when the latest successful update run finished.
+define( 'NATIONAL_GRID_OPTION_LAST_UPDATE_FINISHED_AT', 'national_grid_last_update_finished_at' );
 
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/DataException.php';
 require_once NATIONAL_GRID_PLUGIN_DIR . 'helpers/Time.php';
@@ -182,6 +184,10 @@ function national_grid_activate() {
         add_option( NATIONAL_GRID_OPTION_LAST_UPDATE_STARTED_AT, '' );
     }
 
+    if ( false === get_option( NATIONAL_GRID_OPTION_LAST_UPDATE_FINISHED_AT, false ) ) {
+        add_option( NATIONAL_GRID_OPTION_LAST_UPDATE_FINISHED_AT, '' );
+    }
+
     national_grid_create_tables();
     National_Grid_Admin::schedule_initial_update_event();
 }
@@ -234,6 +240,7 @@ function national_grid_uninstall() {
         NATIONAL_GRID_OPTION_CHART_ANIMATION,
         NATIONAL_GRID_OPTION_DEBUG_MODE,
         NATIONAL_GRID_OPTION_LAST_UPDATE_STARTED_AT,
+        NATIONAL_GRID_OPTION_LAST_UPDATE_FINISHED_AT,
     ];
     foreach ( $options as $option_name ) {
         delete_option( $option_name );

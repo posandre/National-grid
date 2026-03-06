@@ -1176,7 +1176,7 @@ class DatabaseStorage {
             'latest' => $latest_half_hour,
             'latest_five_minutes' => $latest_five_minutes,
             'latest_half_hour' => $latest_half_hour,
-            'update_started_at_utc' => (string) get_option( NATIONAL_GRID_OPTION_LAST_UPDATE_STARTED_AT, '' ),
+            'update_finished_at_utc' => (string) get_option( NATIONAL_GRID_OPTION_LAST_UPDATE_FINISHED_AT, '' ),
             'pie' => $pie
         ];
 

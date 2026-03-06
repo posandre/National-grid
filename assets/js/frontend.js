@@ -1060,8 +1060,8 @@
         }
 
         chartState.lastPointTime =
-          typeof nextData.update_started_at_utc === "string"
-            ? nextData.update_started_at_utc
+          typeof nextData.update_finished_at_utc === "string"
+            ? nextData.update_finished_at_utc
             : "";
         renderLiveHeading(widget, chartState.lastPointTime);
         renderCleanPowerHeading(widget, nextData);
@@ -1085,13 +1085,14 @@
   function getDelayUntilNextRefresh(lastPointTime) {
     var intervalMinutes = parseInt(config.timeoutMinutes, 10) || 5;
     var intervalMs = intervalMinutes * 60 * 1000;
+    var startOffsetMs = 60 * 1000;
     var date = parseUtcDateTime(lastPointTime);
     if (!date) {
       return intervalMs;
     }
 
     var now = Date.now();
-    var updateTs = date.getTime();
+    var updateTs = date.getTime() + startOffsetMs;
     if (updateTs >= now) {
       return Math.max(1000, updateTs - now);
     }
