@@ -291,6 +291,20 @@
     tooltipNode.style.display = "none";
   }
 
+  // Ensures only one custom X-axis tooltip is visible across all widgets.
+  function hideOtherBarAxisTooltips(activeTooltipNode) {
+    var tooltipNodes = document.querySelectorAll(".national-grid-frontend-axis-tooltip");
+    if (!tooltipNodes.length) {
+      return;
+    }
+
+    tooltipNodes.forEach(function (node) {
+      if (node !== activeTooltipNode) {
+        node.style.display = "none";
+      }
+    });
+  }
+
   // Returns X-axis label index when pointer is over the label area.
   function getXAxisLabelIndexFromPointer(chart, event) {
     if (!chart || !chart.scales || !chart.scales.x || !chart.chartArea || !chart.canvas) {
@@ -410,6 +424,7 @@
       " GW (" +
       formatPercent(percent) +
       "% of total generation)</div>";
+    hideOtherBarAxisTooltips(tooltipNode);
     tooltipNode.style.display = "block";
     positionBarAxisTooltip(widget, tooltipNode, event.clientX, event.clientY);
   }
