@@ -864,6 +864,47 @@
             grid: {
               display: false,
             },
+            ticks: {
+              align: "center",
+              minRotation: 0,
+              maxRotation: 0,
+              autoSkip: false,
+              padding: 6,
+              callback: function (value) {
+                var label = this.getLabelForValue(value);
+                if (typeof label !== "string") {
+                  return label;
+                }
+
+                var words = label.trim().split(/\s+/);
+                if (words.length <= 1) {
+                  return label;
+                }
+
+                var maxLineLength = 10;
+                var lines = [];
+                var currentLine = "";
+
+                words.forEach(function (word) {
+                  var nextLine = currentLine ? currentLine + " " + word : word;
+                  if (nextLine.length <= maxLineLength) {
+                    currentLine = nextLine;
+                    return;
+                  }
+
+                  if (currentLine) {
+                    lines.push(currentLine);
+                  }
+                  currentLine = word;
+                });
+
+                if (currentLine) {
+                  lines.push(currentLine);
+                }
+
+                return lines.length ? lines : label;
+              },
+            },
           },
           y: {
             stacked: true,
