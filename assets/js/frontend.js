@@ -33,7 +33,7 @@
   // Category definitions used to build grouped stacked bars.
   var BAR_GROUPS = [
     { label: "Renewable", components: ["Wind", "Solar", "Hydroelectric"] },
-    { label: "Low Carbon", components: ["Biomass", "Nuclear"] },
+    { label: "Other Low Carbon", components: ["Biomass", "Nuclear"] },
     { label: "Fossil Fuels", components: ["Gas"] },
     { label: "Other", components: ["Interconnectors", "Storage"] },
   ];

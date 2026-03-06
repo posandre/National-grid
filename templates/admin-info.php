@@ -213,7 +213,7 @@ $table_prefix = isset( $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
         </thead>
         <tbody>
         <tr><td>Renewable</td><td><code>Wind + Solar + Hydroelectric</code></td></tr>
-        <tr><td>Low Carbon</td><td><code>Biomass + Nuclear</code></td></tr>
+        <tr><td>Other Low Carbon</td><td><code>Biomass + Nuclear</code></td></tr>
         <tr><td>Fossil Fuels</td><td><code>Gas</code></td></tr>
         <tr><td>Other</td><td><code>Interconnectors + Storage</code></td></tr>
         </tbody>
