@@ -11,10 +11,8 @@ class DatabaseStorage {
     private const STATUS_ERROR = 'error';
     /** Debug log filename in uploads directory. */
     private const DEBUG_LOG_FILENAME = 'national-grid-debug.log';
-    /** Maximum number of debug entries to keep in file. */
-    private const DEBUG_LOG_MAX_EVENTS = 3;
-    /** Maximum debug log file size in bytes. */
-    private const DEBUG_LOG_MAX_BYTES = 262144;
+    /** Maximum debug log file size in bytes (1 MB). */
+    private const DEBUG_LOG_MAX_BYTES = 1048576;
     /** Transient key used for short-lived frontend chart payload cache. */
     private const FRONTEND_CHART_TRANSIENT_KEY = 'national_grid_frontend_chart_data';
     /** Frontend chart payload cache lifetime in seconds. */
@@ -244,7 +242,7 @@ class DatabaseStorage {
             $entries
         );
 
-        $entries = array_values( array_slice( $entries, -1 * self::DEBUG_LOG_MAX_EVENTS ) );
+        $entries = array_values( $entries );
 
         while ( count( $entries ) > 1 && strlen( implode( "\n", $entries ) ) > self::DEBUG_LOG_MAX_BYTES ) {
             array_shift( $entries );
