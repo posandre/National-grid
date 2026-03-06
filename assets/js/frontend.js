@@ -148,7 +148,7 @@
 
       ctx.fillStyle = "#102a43";
       ctx.font = "700 14px sans-serif";
-      ctx.fillText(total.toFixed(1) + " GW", centerX, centerY + 10);
+      ctx.fillText(formatNumberForDisplay(total) + " GW", centerX, centerY + 10);
       ctx.restore();
     },
   };
@@ -195,7 +195,7 @@
           }
 
           var barHeight = Math.abs(bar.base - bar.y);
-          ctx.fillText(value.toFixed(1) + " GW", bar.x, bar.y + barHeight / 2);
+          ctx.fillText(formatNumberForDisplay(value) + " GW", bar.x, bar.y + barHeight / 2);
         });
       });
 
@@ -418,7 +418,7 @@
       escapeHtml(label) +
       "</div>" +
       "<div>Total: " +
-      categoryTotal.toFixed(1) +
+      formatNumberForDisplay(categoryTotal) +
       " GW (" +
       formatPercent(percent) +
       "% of total generation)</div>";
@@ -510,7 +510,18 @@
       return "100";
     }
 
-    return numeric.toFixed(1);
+    return formatNumberForDisplay(numeric);
+  }
+
+  // Formats values with up to 1 decimal and removes trailing .0 (e.g. 16.0 -> 16).
+  function formatNumberForDisplay(value) {
+    var numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return "0";
+    }
+
+    var rounded = numeric.toFixed(1);
+    return rounded.replace(/\.0$/, "");
   }
 
   // Returns non-negative numeric component value from pie map.
@@ -810,7 +821,7 @@
                 return (
                   label +
                   ": " +
-                  value.toFixed(1) +
+                  formatNumberForDisplay(value) +
                   " GW (" +
                   formatPercent(percent) +
                   "%)"
@@ -899,7 +910,7 @@
                 return (
                   (context.dataset.label || "") +
                   ": " +
-                  safeValue.toFixed(1) +
+                  formatNumberForDisplay(safeValue) +
                   " GW (" +
                   formatPercent(percent) +
                   "% of " +
