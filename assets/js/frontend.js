@@ -978,6 +978,28 @@
     return chart;
   }
 
+  // Forces a visible transition on AJAX refresh, even if dataset values are unchanged.
+  function applyChartUpdateWithAnimation(chart) {
+    if (!chart) {
+      return;
+    }
+
+    try {
+      var isAnimationEnabled =
+        chart.options &&
+        Object.prototype.hasOwnProperty.call(chart.options, "animation") &&
+        chart.options.animation !== false;
+
+      if (isAnimationEnabled && typeof chart.reset === "function") {
+        chart.reset();
+      }
+    } catch (error) {
+      // Keep AJAX flow alive even if Chart.js reset is not available for current state.
+    }
+
+    chart.update();
+  }
+
   // Updates pie chart data.
   function updatePieChart(chart, chartData) {
     if (!chart) {
@@ -988,7 +1010,7 @@
     if (!pieData) {
       chart.data.labels = [];
       chart.data.datasets = [{ data: [] }];
-      chart.update();
+      applyChartUpdateWithAnimation(chart);
       return;
     }
 
@@ -1001,7 +1023,7 @@
         borderWidth: 1,
       },
     ];
-    chart.update();
+    applyChartUpdateWithAnimation(chart);
   }
 
   // Updates bar chart series from latest payload.
@@ -1014,13 +1036,13 @@
     if (!barData) {
       chart.data.labels = [];
       chart.data.datasets = [];
-      chart.update();
+      applyChartUpdateWithAnimation(chart);
       return;
     }
 
     chart.data.labels = barData.labels;
     chart.data.datasets = barData.datasets;
-    chart.update();
+    applyChartUpdateWithAnimation(chart);
   }
 
   // Fetches latest chart data via AJAX and updates widget UI.
