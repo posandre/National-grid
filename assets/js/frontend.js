@@ -524,6 +524,12 @@
     return rounded.replace(/\.0$/, "");
   }
 
+  // Returns current UTC timestamp in "YYYY-MM-DD HH:mm:ss" format.
+  function getCurrentUtcTimestampString() {
+    var now = new Date();
+    return now.toISOString().slice(0, 19).replace("T", " ");
+  }
+
   // Returns non-negative numeric component value from pie map.
   function getComponentValue(pieMap, label) {
     var value = pieMap && Object.prototype.hasOwnProperty.call(pieMap, label) ? Number(pieMap[label]) : 0;
@@ -1082,9 +1088,12 @@
         }
 
         chartState.lastPointTime =
-          typeof nextData.update_started_at_utc === "string"
-            ? nextData.update_started_at_utc
-            : "";
+          response &&
+          response.data &&
+          typeof response.data.updatedAt === "string" &&
+          response.data.updatedAt
+            ? response.data.updatedAt
+            : getCurrentUtcTimestampString();
         renderLiveHeading(widget, chartState.lastPointTime);
         renderCleanPowerHeading(widget, nextData);
         renderSharedLegend(widget, nextData);
@@ -1105,7 +1114,7 @@
     var chartState = {
       pieChart: null,
       barChart: null,
-      lastPointTime: "",
+      lastPointTime: getCurrentUtcTimestampString(),
     };
 
     renderSharedLegend(widget, {});
