@@ -1426,6 +1426,7 @@ class National_Grid_Admin {
         }
 
         if ( 'settings' === $active_tab ) {
+            echo '<div class="notice notice-info inline"><p>' . esc_html__( 'After changing settings, we recommend clearing WP Engine cache and any caching plugin cache used on the site.', 'national-grid' ) . '</p></div>';
             echo '<form method="post" action="options.php">';
 
             settings_fields( 'national_grid_settings' );
