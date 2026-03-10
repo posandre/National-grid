@@ -9,6 +9,8 @@
   var config = window.nationalGridFrontend;
   // Controls Chart.js animation for pie/bar charts.
   var CHART_ANIMATION = Number(config.chartAnimation) === 1 ? {} : false;
+  // Shared chart font family used by canvas-drawn labels and Chart.js options.
+  var CHART_FONT_FAMILY = '"Open Sans", sans-serif';
   // All frontend widget instances on the current page.
   var widgets = document.querySelectorAll(".national-grid-frontend");
   if (!widgets.length) {
@@ -83,7 +85,7 @@
       var ctx = chart.ctx;
       var meta = chart.getDatasetMeta(0);
       ctx.save();
-      ctx.font = "600 12px sans-serif";
+      ctx.font = "600 12px " + CHART_FONT_FAMILY;
       ctx.fillStyle = "#102a43";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -144,11 +146,11 @@
       ctx.fillStyle = "#334e68";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.font = "700 14px sans-serif";
+      ctx.font = "700 14px " + CHART_FONT_FAMILY;
       ctx.fillText("Total Generation", centerX, centerY - 10);
 
       ctx.fillStyle = "#102a43";
-      ctx.font = "700 14px sans-serif";
+      ctx.font = "700 14px " + CHART_FONT_FAMILY;
       ctx.fillText(formatNumberForDisplay(total) + " GW", centerX, centerY + 10);
       ctx.restore();
     },
@@ -167,7 +169,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#102a43";
-      ctx.font = "600 11px sans-serif";
+      ctx.font = "600 11px " + CHART_FONT_FAMILY;
 
       chart.data.datasets.forEach(function (dataset, datasetIndex) {
         var meta = chart.getDatasetMeta(datasetIndex);
@@ -853,6 +855,9 @@
         responsive: true,
         maintainAspectRatio: false,
         animation: CHART_ANIMATION,
+        font: {
+          family: CHART_FONT_FAMILY,
+        },
         cutout: "52%",
         interaction: {
           mode: "nearest",
@@ -918,6 +923,9 @@
         responsive: true,
         maintainAspectRatio: false,
         animation: CHART_ANIMATION,
+        font: {
+          family: CHART_FONT_FAMILY,
+        },
         scales: {
           x: {
             stacked: true,
