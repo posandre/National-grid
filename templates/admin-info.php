@@ -221,8 +221,8 @@ $table_prefix = isset( $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
 
     <h4><?php esc_html_e( 'Label rendering rules', 'national-grid' ); ?></h4>
     <ul>
-        <li><?php esc_html_e( 'Pie segment labels are shown only for slices >= 5% of pie total.', 'national-grid' ); ?></li>
-        <li><?php esc_html_e( 'Bar segment inline labels are shown only for segments >= 20% of their stack.', 'national-grid' ); ?></li>
+        <li><?php esc_html_e( 'Pie segment labels are shown only for slices >= 4.6% of pie total.', 'national-grid' ); ?></li>
+        <li><?php esc_html_e( 'Bar segment inline labels are shown only when segment height is >= 18px (desktop) or >= 14px (mobile).', 'national-grid' ); ?></li>
         <li><?php esc_html_e( 'Tooltip still shows exact values for all segments, including small ones.', 'national-grid' ); ?></li>
     </ul>
 

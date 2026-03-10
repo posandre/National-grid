@@ -38,8 +38,9 @@
     { label: "Other", components: ["Interconnectors", "Storage"] },
   ];
 
-  // Minimum share of a stacked bar segment required to render inline label.
-  var BAR_LABEL_MIN_PERCENT = 20;
+  // Minimum bar segment pixel height required for readable inline labels.
+  var BAR_LABEL_MIN_HEIGHT_PX_DESKTOP = 18;
+  var BAR_LABEL_MIN_HEIGHT_PX_MOBILE = 14;
 
   // Fallback palette when no explicit color mapping exists.
   var palette = [
@@ -94,7 +95,7 @@
         }
 
         var percent = (value / total) * 100;
-        if ( percent < 5 ) {
+        if ( percent < 4.6 ) {
           return;
         }
 
@@ -180,21 +181,17 @@
             return;
           }
 
-          var stackTotal = chart.data.datasets.reduce(function (sum, ds, dsIndex) {
-            var dsMeta = chart.getDatasetMeta(dsIndex);
-            if (!dsMeta || dsMeta.hidden) {
-              return sum;
-            }
-
-            var segmentValue = Number(ds.data[index]);
-            return Number.isFinite(segmentValue) && segmentValue > 0 ? sum + segmentValue : sum;
-          }, 0);
-          var segmentPercent = stackTotal > 0 ? (value / stackTotal) * 100 : 0;
-          if (segmentPercent < BAR_LABEL_MIN_PERCENT) {
+          var barHeight = Math.abs(bar.base - bar.y);
+          var minLabelHeightPx =
+            typeof window !== "undefined" &&
+            window.matchMedia &&
+            window.matchMedia("(max-width: 767px)").matches
+              ? BAR_LABEL_MIN_HEIGHT_PX_MOBILE
+              : BAR_LABEL_MIN_HEIGHT_PX_DESKTOP;
+          if (barHeight < minLabelHeightPx) {
             return;
           }
 
-          var barHeight = Math.abs(bar.base - bar.y);
           ctx.fillText(formatNumberForDisplay(value) + " GW", bar.x, bar.y + barHeight / 2);
         });
       });
@@ -300,6 +297,43 @@
 
     tooltipNodes.forEach(function (node) {
       node.style.display = "none";
+    });
+  }
+
+  // Closes native Chart.js tooltip and hover state for a single chart.
+  function clearChartNativeTooltip(chart) {
+    if (!chart) {
+      return;
+    }
+
+    if (typeof chart.setActiveElements === "function") {
+      chart.setActiveElements([]);
+    }
+    if (chart.tooltip && typeof chart.tooltip.setActiveElements === "function") {
+      chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+    }
+    if (typeof chart.update === "function") {
+      chart.update("none");
+    }
+  }
+
+  // Closes native Chart.js tooltips on all charts except the one passed in.
+  function clearOtherChartNativeTooltips(activeChart) {
+    if (
+      typeof window === "undefined" ||
+      !window.Chart ||
+      !window.Chart.instances ||
+      typeof window.Chart.instances !== "object"
+    ) {
+      return;
+    }
+
+    Object.keys(window.Chart.instances).forEach(function (key) {
+      var instance = window.Chart.instances[key];
+      if (!instance || instance === activeChart) {
+        return;
+      }
+      clearChartNativeTooltip(instance);
     });
   }
 
@@ -425,15 +459,8 @@
 
     // Always close any previously open tooltips before showing the next one.
     hideOtherBarAxisTooltips();
-    if (typeof chart.setActiveElements === "function") {
-      chart.setActiveElements([]);
-    }
-    if (chart.tooltip && typeof chart.tooltip.setActiveElements === "function") {
-      chart.tooltip.setActiveElements([], { x: 0, y: 0 });
-    }
-    if (typeof chart.update === "function") {
-      chart.update("none");
-    }
+    clearOtherChartNativeTooltips(chart);
+    clearChartNativeTooltip(chart);
 
     tooltipNode.style.display = "block";
     positionBarAxisTooltip(widget, tooltipNode, event.clientX, event.clientY);
@@ -451,6 +478,11 @@
     }
 
     var handlePointerLikeMove = function (event) {
+      if (event && event.type && event.type.indexOf("touch") === 0) {
+        clearOtherChartNativeTooltips(chart);
+        clearChartNativeTooltip(chart);
+      }
+
       var point = getClientPoint(event);
       if (!point) {
         hideBarAxisTooltip(tooltipNode);
@@ -481,6 +513,25 @@
     chart.canvas.addEventListener("touchcancel", function () {
       hideBarAxisTooltip(tooltipNode);
     });
+  }
+
+  // Closes bar custom tooltip and other native chart tooltips when interacting with pie chart.
+  function attachPieInteractionCleanup(chart) {
+    if (!chart || !chart.canvas) {
+      return;
+    }
+
+    var handleTouchLikeInteraction = function (event) {
+      if (!event || !event.type || event.type.indexOf("touch") !== 0) {
+        return;
+      }
+
+      hideOtherBarAxisTooltips();
+      clearOtherChartNativeTooltips(chart);
+    };
+
+    chart.canvas.addEventListener("touchstart", handleTouchLikeInteraction, { passive: true });
+    chart.canvas.addEventListener("touchmove", handleTouchLikeInteraction, { passive: true });
   }
 
   // Sums numeric dataset values, skipping non-finite entries.
@@ -785,7 +836,7 @@
       return null;
     }
 
-    return new window.Chart(canvas, {
+    var chart = new window.Chart(canvas, {
       type: "pie",
       data: {
         labels: pieData.labels,
@@ -838,6 +889,9 @@
       },
       plugins: [piePercentLabelsPlugin, pieCenterTotalPlugin],
     });
+
+    attachPieInteractionCleanup(chart);
+    return chart;
   }
 
   // Creates the grouped stacked bar chart instance.
