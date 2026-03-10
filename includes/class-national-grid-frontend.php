@@ -92,7 +92,7 @@ class National_Grid_Frontend {
                 'additional_class' => $additional_class,
                 'hide_title' => $hide_title,
                 'hide_timezone' => $hide_timezone,
-                'live_heading' => self::build_live_heading( [], $hide_timezone ),
+                'live_heading' => self::build_live_heading( self::get_chart_data(), $hide_timezone ),
             ]
         );
     }
@@ -329,7 +329,14 @@ class National_Grid_Frontend {
     private static function build_live_heading( array $chart_data, bool $hide_timezone = false ) {
         $timezone_segment = $hide_timezone ? '' : ' (' . self::get_timezone_label() . ')';
         $time = '';
-        if ( isset( $chart_data['update_started_at_utc'] ) ) {
+        if (
+            isset( $chart_data['latest_five_minutes'] )
+            && is_array( $chart_data['latest_five_minutes'] )
+            && isset( $chart_data['latest_five_minutes']['time'] )
+        ) {
+            $time = (string) $chart_data['latest_five_minutes']['time'];
+        }
+        if ( '' === $time && isset( $chart_data['update_started_at_utc'] ) ) {
             $time = (string) $chart_data['update_started_at_utc'];
         }
 

@@ -1160,12 +1160,17 @@
         }
 
         chartState.lastPointTime =
-          response &&
-          response.data &&
-          typeof response.data.updatedAt === "string" &&
-          response.data.updatedAt
-            ? response.data.updatedAt
-            : getCurrentUtcTimestampString();
+          nextData &&
+          nextData.latest_five_minutes &&
+          typeof nextData.latest_five_minutes.time === "string" &&
+          nextData.latest_five_minutes.time
+            ? nextData.latest_five_minutes.time
+            : response &&
+                response.data &&
+                typeof response.data.updatedAt === "string" &&
+                response.data.updatedAt
+              ? response.data.updatedAt
+              : getCurrentUtcTimestampString();
         renderLiveHeading(widget, chartState.lastPointTime);
         renderCleanPowerHeading(widget, nextData);
         renderSharedLegend(widget, nextData);
