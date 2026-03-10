@@ -11,6 +11,16 @@
   var CHART_ANIMATION = Number(config.chartAnimation) === 1 ? {} : false;
   // Shared chart font family used by canvas-drawn labels and Chart.js options.
   var CHART_FONT_FAMILY = '"Open Sans", sans-serif';
+  // Text color used across chart labels and axes.
+  var CHART_TEXT_COLOR =
+    typeof config.chartTextColor === "string" && config.chartTextColor.trim() !== ""
+      ? config.chartTextColor
+      : "#000000";
+  // Text color used specifically in tooltips.
+  var TOOLTIP_TEXT_COLOR =
+    typeof config.tooltipTextColor === "string" && config.tooltipTextColor.trim() !== ""
+      ? config.tooltipTextColor
+      : "#ffffff";
   // All frontend widget instances on the current page.
   var widgets = document.querySelectorAll(".national-grid-frontend");
   if (!widgets.length) {
@@ -86,7 +96,7 @@
       var meta = chart.getDatasetMeta(0);
       ctx.save();
       ctx.font = "600 12px " + CHART_FONT_FAMILY;
-      ctx.fillStyle = "#102a43";
+      ctx.fillStyle = CHART_TEXT_COLOR;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -143,13 +153,13 @@
       ctx.fillStyle = "#ffffff";
       ctx.fill();
 
-      ctx.fillStyle = "#334e68";
+      ctx.fillStyle = CHART_TEXT_COLOR;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.font = "700 14px " + CHART_FONT_FAMILY;
       ctx.fillText("Total Generation", centerX, centerY - 10);
 
-      ctx.fillStyle = "#102a43";
+      ctx.fillStyle = CHART_TEXT_COLOR;
       ctx.font = "700 14px " + CHART_FONT_FAMILY;
       ctx.fillText(formatNumberForDisplay(total) + " GW", centerX, centerY + 10);
       ctx.restore();
@@ -168,7 +178,7 @@
       ctx.save();
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = "#102a43";
+      ctx.fillStyle = CHART_TEXT_COLOR;
       ctx.font = "600 11px " + CHART_FONT_FAMILY;
 
       chart.data.datasets.forEach(function (dataset, datasetIndex) {
@@ -266,7 +276,7 @@
     tooltipNode.style.maxWidth = "300px";
     tooltipNode.style.padding = "6px";
     tooltipNode.style.background = "rgba(0, 0, 0, 0.8)";
-    tooltipNode.style.color = "#ffffff";
+    tooltipNode.style.color = TOOLTIP_TEXT_COLOR;
     tooltipNode.style.borderRadius = "6px";
     tooltipNode.style.fontSize = "12px";
     tooltipNode.style.lineHeight = "1.4";
@@ -934,6 +944,7 @@
             },
             ticks: {
               align: "center",
+              color: CHART_TEXT_COLOR,
               font: {
                 size: isMobileViewport ? 10 : 12,
               },
@@ -982,6 +993,7 @@
             beginAtZero: true,
             display: true,
             ticks: {
+              color: CHART_TEXT_COLOR,
               font: {
                 size: isMobileViewport ? 10 : 12,
               },
@@ -993,7 +1005,7 @@
                 size: isMobileViewport ? 10 : 12,
                 weight: "700",
               },
-              color: "#000000"
+              color: CHART_TEXT_COLOR
             },
           },
         },

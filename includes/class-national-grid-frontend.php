@@ -176,6 +176,8 @@ class National_Grid_Frontend {
                 'timezoneLabel' => self::get_timezone_label(),
                 'timezone' => self::get_timezone_for_js(),
                 'chartAnimation' => 1 === (int) get_option( NATIONAL_GRID_OPTION_CHART_ANIMATION, 1 ) ? 1 : 0,
+                'chartTextColor' => '#5c5c5c',
+                'tooltipTextColor' => '#ffffff',
             ]
         );
     }
