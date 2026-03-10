@@ -497,19 +497,91 @@ class National_Grid_Admin {
      */
     public static function maybe_sync_cron_event() {
         $enabled = 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 );
-        $timestamp = wp_next_scheduled( self::CRON_HOOK );
-
         if ( ! $enabled ) {
-            while ( false !== $timestamp ) {
-                wp_unschedule_event( $timestamp, self::CRON_HOOK );
-                $timestamp = wp_next_scheduled( self::CRON_HOOK );
-            }
+            self::unschedule_events_by_hook( self::CRON_HOOK );
             return;
         }
 
+        $interval_seconds = max( 5, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) ) * MINUTE_IN_SECONDS;
+        $target_timestamp = self::get_next_cron_anchor_timestamp( $interval_seconds );
+        $timestamp = wp_next_scheduled( self::CRON_HOOK );
+        $now = time();
+
         if ( false === $timestamp ) {
-            wp_schedule_event( time() + MINUTE_IN_SECONDS, self::CRON_SCHEDULE, self::CRON_HOOK );
+            $fallback_timestamp = $now + MINUTE_IN_SECONDS;
+            wp_schedule_event(
+                null !== $target_timestamp ? (int) $target_timestamp : $fallback_timestamp,
+                self::CRON_SCHEDULE,
+                self::CRON_HOOK
+            );
+            return;
         }
+
+        if ( (int) $timestamp <= $now || null === $target_timestamp ) {
+            return;
+        }
+
+        if ( (int) $timestamp !== (int) $target_timestamp ) {
+            self::unschedule_events_by_hook( self::CRON_HOOK );
+            wp_schedule_event( $target_timestamp, self::CRON_SCHEDULE, self::CRON_HOOK );
+        }
+    }
+
+    /**
+     * Unschedules all events for a given hook.
+     *
+     * @param string $hook Cron hook name.
+     * @return void
+     */
+    private static function unschedule_events_by_hook( string $hook ): void {
+        $timestamp = wp_next_scheduled( $hook );
+        while ( false !== $timestamp ) {
+            wp_unschedule_event( $timestamp, $hook );
+            $timestamp = wp_next_scheduled( $hook );
+        }
+    }
+
+    /**
+     * Calculates next recurring cron timestamp aligned to configured anchor.
+     *
+     * @param int $interval_seconds Cron interval in seconds.
+     * @return int|null
+     */
+    private static function get_next_cron_anchor_timestamp( int $interval_seconds ) {
+        $now = time();
+        $anchor_utc = (string) get_option( NATIONAL_GRID_OPTION_CRON_ANCHOR_UTC, '' );
+        $anchor_timestamp = self::parse_utc_timestamp( $anchor_utc );
+        if ( null === $anchor_timestamp ) {
+            return null;
+        }
+
+        if ( $anchor_timestamp >= $now ) {
+            return $anchor_timestamp;
+        }
+
+        $elapsed_seconds = $now - $anchor_timestamp;
+        $steps = (int) ceil( $elapsed_seconds / $interval_seconds );
+        return $anchor_timestamp + ( $steps * $interval_seconds );
+    }
+
+    /**
+     * Parses plugin UTC timestamp string into Unix timestamp.
+     *
+     * @param string $utc_timestamp UTC timestamp in Y-m-d H:i:s format.
+     * @return int|null
+     */
+    private static function parse_utc_timestamp( string $utc_timestamp ) {
+        $utc_timestamp = trim( $utc_timestamp );
+        if ( '' === $utc_timestamp ) {
+            return null;
+        }
+
+        $date = DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $utc_timestamp, new DateTimeZone( 'UTC' ) );
+        if ( ! $date instanceof DateTimeImmutable ) {
+            return null;
+        }
+
+        return $date->getTimestamp();
     }
 
     /**
@@ -541,23 +613,11 @@ class National_Grid_Admin {
      * @return void
      */
     public static function clear_scheduled_events(): void {
-        $timestamp = wp_next_scheduled( self::CRON_HOOK );
-        while ( false !== $timestamp ) {
-            wp_unschedule_event( $timestamp, self::CRON_HOOK );
-            $timestamp = wp_next_scheduled( self::CRON_HOOK );
-        }
+        self::unschedule_events_by_hook( self::CRON_HOOK );
 
-        $timestamp = wp_next_scheduled( self::INITIAL_CRON_HOOK );
-        while ( false !== $timestamp ) {
-            wp_unschedule_event( $timestamp, self::INITIAL_CRON_HOOK );
-            $timestamp = wp_next_scheduled( self::INITIAL_CRON_HOOK );
-        }
+        self::unschedule_events_by_hook( self::INITIAL_CRON_HOOK );
 
-        $timestamp = wp_next_scheduled( self::LOG_CLEAR_CRON_HOOK );
-        while ( false !== $timestamp ) {
-            wp_unschedule_event( $timestamp, self::LOG_CLEAR_CRON_HOOK );
-            $timestamp = wp_next_scheduled( self::LOG_CLEAR_CRON_HOOK );
-        }
+        self::unschedule_events_by_hook( self::LOG_CLEAR_CRON_HOOK );
     }
 
     /**
@@ -729,6 +789,11 @@ class National_Grid_Admin {
 
             $finished_at_utc = gmdate( 'Y-m-d H:i:s' );
             update_option( NATIONAL_GRID_OPTION_LAST_UPDATE_FINISHED_AT, $finished_at_utc, false );
+            if ( 'manual' === $source ) {
+                // Manual update acts as sync anchor for recurring cron runs.
+                update_option( NATIONAL_GRID_OPTION_CRON_ANCHOR_UTC, $finished_at_utc, false );
+                self::maybe_sync_cron_event();
+            }
 
             return [
                 'success' => true,
