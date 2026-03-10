@@ -54,6 +54,7 @@ class National_Grid_Frontend {
                 'description' => '',
                 'additional_class' => '',
                 'hide_title' => '0',
+                'hide_timezone' => '1',
             ],
             $atts,
             self::SHORTCODE
@@ -67,6 +68,7 @@ class National_Grid_Frontend {
             ? ''
             : self::resolve_description( $shortcode_description );
         $hide_title = self::is_truthy_shortcode_flag( $atts['hide_title'] );
+        $hide_timezone = self::is_truthy_shortcode_flag( $atts['hide_timezone'] );
         $additional_class = trim( (string) $atts['additional_class'] );
         $additional_class = '' !== $additional_class
             ? implode(
@@ -89,7 +91,8 @@ class National_Grid_Frontend {
                 'description' => $description,
                 'additional_class' => $additional_class,
                 'hide_title' => $hide_title,
-                'live_heading' => self::build_live_heading( [] ),
+                'hide_timezone' => $hide_timezone,
+                'live_heading' => self::build_live_heading( [], $hide_timezone ),
             ]
         );
     }
@@ -320,9 +323,11 @@ class National_Grid_Frontend {
      * Builds the live heading string with site timezone formatting.
      *
      * @param array<string, mixed> $chart_data Frontend chart payload.
+     * @param bool $hide_timezone Whether to hide timezone label in heading.
      * @return string
      */
-    private static function build_live_heading( array $chart_data ) {
+    private static function build_live_heading( array $chart_data, bool $hide_timezone = false ) {
+        $timezone_segment = $hide_timezone ? '' : ' (' . self::get_timezone_label() . ')';
         $time = '';
         if ( isset( $chart_data['update_started_at_utc'] ) ) {
             $time = (string) $chart_data['update_started_at_utc'];
@@ -330,9 +335,9 @@ class National_Grid_Frontend {
 
         if ( '' === $time ) {
             return sprintf(
-                'National Grid: --:-- %s (%s) - Generation Mix and Type.',
+                'National Grid: --:-- %s%s - Generation Mix and Type.',
                 __( 'Today', 'national-grid' ),
-                self::get_timezone_label()
+                $timezone_segment
             );
         }
 
@@ -346,16 +351,16 @@ class National_Grid_Frontend {
                 : $local->format( 'Y-m-d' );
 
             return sprintf(
-                'National Grid: %s %s (%s) - Generation Mix and Type.',
+                'National Grid: %s %s%s - Generation Mix and Type.',
                 $local->format( 'H:i' ),
                 $day_label,
-                self::get_timezone_label()
+                $timezone_segment
             );
         } catch ( Exception $e ) {
             return sprintf(
-                'National Grid: --:-- %s (%s) - Generation Mix and Type.',
+                'National Grid: --:-- %s%s - Generation Mix and Type.',
                 __( 'Today', 'national-grid' ),
-                self::get_timezone_label()
+                $timezone_segment
             );
         }
     }

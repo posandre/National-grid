@@ -775,16 +775,16 @@
       return;
     }
 
+    var hideTimezone = widget && widget.getAttribute("data-hide-timezone") === "1";
     var tzLabel = config.timezoneLabel || "UTC";
+    var timezoneSegment = hideTimezone ? "" : " (" + tzLabel + ")";
     var date = parseUtcDateTime(pointTime);
     if (!date) {
       headingNode.textContent =
         (config.liveHeadingPrefix || "National Grid:") +
         " --:-- " +
         (config.todayLabel || "Today") +
-        " (" +
-        tzLabel +
-        ")" +
+        timezoneSegment +
         (config.liveHeadingSuffix || " - Generation Mix and Type.");
       return;
     }
@@ -807,9 +807,7 @@
       pointParts.minute +
       " " +
       dayLabel +
-      " (" +
-      tzLabel +
-      ")" +
+      timezoneSegment +
       (config.liveHeadingSuffix || " - Generation Mix and Type.");
   }
 
