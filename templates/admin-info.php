@@ -171,7 +171,15 @@ $table_prefix = isset( $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
         </tr>
         <tr>
             <td><code>hide_timezone</code></td>
-            <td><?php esc_html_e( 'Set to 1/true/yes/on to hide timezone suffix in the live heading.', 'national-grid' ); ?></td>
+            <td><?php esc_html_e( 'Set to 1/true/yes/on to hide timezone suffix in the live heading. Default: enabled (timezone hidden).', 'national-grid' ); ?></td>
+        </tr>
+        <tr>
+            <td><code>section_width</code></td>
+            <td><?php esc_html_e( 'Section width mode: full or container. Default: full. Invalid or missing value falls back to full.', 'national-grid' ); ?></td>
+        </tr>
+        <tr>
+            <td><code>section_paddings</code></td>
+            <td><?php esc_html_e( 'Header paddings preset class: big, normal, or small. Default: normal.', 'national-grid' ); ?></td>
         </tr>
         </tbody>
     </table>
@@ -182,6 +190,9 @@ $table_prefix = isset( $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
     <pre>[show-national-grid title="" description="" additional_class="my-grid my-grid--compact"]</pre>
     <pre>[show-national-grid hide_title="1"]</pre>
     <pre>[show-national-grid hide_timezone="1"]</pre>
+    <pre>[show-national-grid section_width="container"]</pre>
+    <pre>[show-national-grid section_width="full" section_paddings="big"]</pre>
+    <pre>[show-national-grid section_paddings="small"]</pre>
 
     <h3><?php esc_html_e( 'Chart calculation logic', 'national-grid' ); ?></h3>
     <h4><?php esc_html_e( 'Pie chart source mapping', 'national-grid' ); ?></h4>
