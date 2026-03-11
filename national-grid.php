@@ -212,6 +212,81 @@ function national_grid_bootstrap() {
 add_action( 'plugins_loaded', 'national_grid_bootstrap' );
 
 /**
+ * Registers plugin-provided page template for WordPress Pages.
+ *
+ * @param array<string, string> $templates Existing page templates.
+ * @param WP_Theme|null         $theme     Active theme instance.
+ * @param WP_Post|null          $post      Current post when editing.
+ * @param string|null           $post_type Current post type.
+ * @return array<string, string>
+ */
+function national_grid_add_page_template( array $templates, $theme = null, $post = null, $post_type = null ) {
+    if ( null !== $post_type && 'page' !== $post_type ) {
+        return $templates;
+    }
+
+    $templates['national-grid-page-template.php'] = __( 'National Grid Full Page', 'national-grid' );
+    return $templates;
+}
+add_filter( 'theme_page_templates', 'national_grid_add_page_template', 10, 4 );
+
+/**
+ * Loads plugin page template when selected on a Page.
+ *
+ * @param string $template Resolved template path.
+ * @return string
+ */
+function national_grid_include_page_template( $template ) {
+    if ( ! is_singular( 'page' ) ) {
+        return $template;
+    }
+
+    $post = get_queried_object();
+    if ( ! $post instanceof WP_Post ) {
+        return $template;
+    }
+
+    $selected_template = (string) get_post_meta( $post->ID, '_wp_page_template', true );
+    if ( 'national-grid-page-template.php' !== $selected_template ) {
+        return $template;
+    }
+
+    $plugin_template = NATIONAL_GRID_PLUGIN_DIR . 'templates/page-template-national-grid.php';
+    if ( is_readable( $plugin_template ) ) {
+        return $plugin_template;
+    }
+
+    return $template;
+}
+add_filter( 'template_include', 'national_grid_include_page_template' );
+
+/**
+ * Adds template-specific class to <body> when plugin page template is active.
+ *
+ * @param array<int, string> $classes Existing body classes.
+ * @return array<int, string>
+ */
+function national_grid_add_template_body_class( array $classes ) {
+    if ( ! is_singular( 'page' ) ) {
+        return $classes;
+    }
+
+    $post = get_queried_object();
+    if ( ! $post instanceof WP_Post ) {
+        return $classes;
+    }
+
+    $selected_template = (string) get_post_meta( $post->ID, '_wp_page_template', true );
+    if ( 'national-grid-page-template.php' !== $selected_template ) {
+        return $classes;
+    }
+
+    $classes[] = 'national-grid-page-template';
+    return $classes;
+}
+add_filter( 'body_class', 'national_grid_add_template_body_class' );
+
+/**
  * Unschedules plugin cron events on deactivation.
  *
  * @return void
