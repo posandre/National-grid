@@ -175,7 +175,7 @@ class National_Grid_Frontend {
                 'noDataMessage' => __( 'No data available yet.', 'national-grid' ),
                 'todayLabel' => __( 'Today', 'national-grid' ),
                 'liveHeadingPrefix' => __( 'National Grid:', 'national-grid' ),
-                'liveHeadingSuffix' => __( ' - Generation Mix and Type.', 'national-grid' ),
+                'liveHeadingSuffix' => __( ' - Generation Mix and Type', 'national-grid' ),
                 'timezoneLabel' => self::get_timezone_label(),
                 'timezone' => self::get_timezone_for_js(),
                 'chartAnimation' => 1 === (int) get_option( NATIONAL_GRID_OPTION_CHART_ANIMATION, 1 ) ? 1 : 0,
