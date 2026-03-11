@@ -55,6 +55,7 @@ class National_Grid_Frontend {
                 'additional_class' => '',
                 'hide_title' => '0',
                 'hide_timezone' => '1',
+                'section_width' => 'full',
             ],
             $atts,
             self::SHORTCODE
@@ -69,6 +70,10 @@ class National_Grid_Frontend {
             : self::resolve_description( $shortcode_description );
         $hide_title = self::is_truthy_shortcode_flag( $atts['hide_title'] );
         $hide_timezone = self::is_truthy_shortcode_flag( $atts['hide_timezone'] );
+        $section_width = strtolower( trim( (string) $atts['section_width'] ) );
+        if ( ! in_array( $section_width, [ 'container', 'full' ], true ) ) {
+            $section_width = 'full';
+        }
         $additional_class = trim( (string) $atts['additional_class'] );
         $additional_class = '' !== $additional_class
             ? implode(
@@ -92,6 +97,7 @@ class National_Grid_Frontend {
                 'additional_class' => $additional_class,
                 'hide_title' => $hide_title,
                 'hide_timezone' => $hide_timezone,
+                'section_width' => $section_width,
                 'live_heading' => self::build_live_heading( self::get_chart_data(), $hide_timezone ),
             ]
         );
