@@ -9,6 +9,7 @@
  * @var bool $hide_title
  * @var bool $hide_timezone
  * @var string $section_width
+ * @var string $section_paddings
  * @var string $live_heading
  */
 
@@ -16,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 ?>
-<div class="national-grid-frontend<?php echo '' !== trim((string)$additional_class) ? ' ' . esc_attr(trim((string)$additional_class)) : ''; ?>"
+<div class="national-grid-frontend national-grid-frontend--header-paddings-<?php echo esc_attr((string)$section_paddings); ?><?php echo '' !== trim((string)$additional_class) ? ' ' . esc_attr(trim((string)$additional_class)) : ''; ?>"
      id="<?php echo esc_attr((string)$instance_id); ?>" data-hide-timezone="<?php echo $hide_timezone ? '1' : '0'; ?>">
     <?php if ('container' === $section_width) : ?>
     <div class="container">
@@ -57,7 +58,7 @@ if (!defined('ABSPATH')) {
                 </noscript>
             </div>
         </div>
-        <?php if ('container' === $section_width) : ?>
+    <?php if ('container' === $section_width) : ?>
     </div>
-<?php endif; ?>
+    <?php endif; ?>
 </div>
