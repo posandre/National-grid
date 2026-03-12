@@ -53,6 +53,10 @@
   // Minimum bar segment pixel height required for readable inline labels.
   var BAR_LABEL_MIN_HEIGHT_PX_DESKTOP = 18;
   var BAR_LABEL_MIN_HEIGHT_PX_MOBILE = 14;
+  // Pie center label typography for "Total Generation".
+  var PIE_CENTER_TOTAL_FONT_WEIGHT = 700;
+  var PIE_CENTER_TOTAL_FONT_SIZE_PX_DESKTOP = 14;
+  var PIE_CENTER_TOTAL_FONT_SIZE_PX_MOBILE = 12;
 
   // Fallback palette when no explicit color mapping exists.
   var palette = [
@@ -146,6 +150,12 @@
       }
 
       var innerCircleRadius = outerRadius * 0.52;
+      var centerLabelFontSize =
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(max-width: 767px)").matches
+          ? PIE_CENTER_TOTAL_FONT_SIZE_PX_MOBILE
+          : PIE_CENTER_TOTAL_FONT_SIZE_PX_DESKTOP;
       var ctx = chart.ctx;
       ctx.save();
       ctx.beginPath();
@@ -156,11 +166,11 @@
       ctx.fillStyle = CHART_TEXT_COLOR;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.font = "700 14px " + CHART_FONT_FAMILY;
+      ctx.font = PIE_CENTER_TOTAL_FONT_WEIGHT + " " + centerLabelFontSize + "px " + CHART_FONT_FAMILY;
       ctx.fillText("Total Generation", centerX, centerY - 10);
 
       ctx.fillStyle = CHART_TEXT_COLOR;
-      ctx.font = "700 14px " + CHART_FONT_FAMILY;
+      ctx.font = PIE_CENTER_TOTAL_FONT_WEIGHT + " " + centerLabelFontSize + "px " + CHART_FONT_FAMILY;
       ctx.fillText(formatNumberForDisplay(total) + " GW", centerX, centerY + 10);
       ctx.restore();
     },

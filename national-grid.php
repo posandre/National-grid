@@ -281,6 +281,7 @@ function national_grid_add_template_body_class( array $classes ) {
         return $classes;
     }
 
+    $classes[] = 'page-template-template-toggle-builder';
     $classes[] = 'national-grid-page-template';
     return $classes;
 }

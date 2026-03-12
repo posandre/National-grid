@@ -1,8 +1,8 @@
-body.page-template-national-grid-page-template main {
+body.national-grid-page-template main {
   padding: 0;
 }
 
-body.page-template-national-grid-page-template:not(.has-transparent-header) header{
+body.national-grid-page-template:not(.has-transparent-header) header{
   position: relative;
   background-color: #272092;
   min-height: 84px;
