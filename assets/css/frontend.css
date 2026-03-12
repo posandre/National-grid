@@ -72,6 +72,8 @@ body.national-grid-page-template:not(.has-transparent-header) header{
   font-size: 20px;
   display: block;
   margin-bottom: 0;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 .national-grid-frontend .national-grid-frontend-clean-power-heading {

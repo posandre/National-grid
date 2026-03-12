@@ -1201,7 +1201,7 @@
     var chartState = {
       pieChart: null,
       barChart: null,
-      lastPointTime: getCurrentUtcTimestampString(),
+      lastPointTime: "",
     };
 
     renderSharedLegend(widget, {});
