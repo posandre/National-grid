@@ -53,7 +53,7 @@ class National_Grid_Frontend {
                 'title' => '',
                 'description' => '',
                 'additional_class' => '',
-                'hide_title' => '0',
+                'hide_title' => '1',
                 'hide_timezone' => '1',
                 'section_width' => 'full',
                 'section_paddings' => 'normal',

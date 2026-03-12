@@ -1,3 +1,13 @@
+body.page-template-national-grid-page-template main {
+  padding: 0;
+}
+
+body.page-template-national-grid-page-template:not(.has-transparent-header) header{
+  position: relative;
+  background-color: #272092;
+  min-height: 84px;
+}
+
 .national-grid-frontend,  .national-grid-frontend .page-template-default{
   box-sizing: border-box;
   width: 100%;
