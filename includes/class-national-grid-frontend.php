@@ -15,6 +15,8 @@ class National_Grid_Frontend {
     private const DEFAULT_TITLE = 'National Grid - Live';
     /** Fallback widget description when no custom value is configured. */
     private const DEFAULT_DESCRIPTION = '';
+    /** Cron hook name for scheduled data updates (mirrors admin cron hook). */
+    private const CRON_HOOK = 'national_grid_cron_update_data';
 
     private static $instance_counter = 0;
     private static $assets_required = false;
@@ -181,6 +183,7 @@ class National_Grid_Frontend {
                 'action' => self::AJAX_ACTION,
                 'nonce' => wp_create_nonce( self::AJAX_NONCE_ACTION ),
                 'timeoutMinutes' => max( 5, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) ),
+                'fallbackTimeoutMinutes' => max( 5, (int) get_option( NATIONAL_GRID_OPTION_TIMEOUT, 5 ) ),
                 'errorMessage' => __( 'Unable to refresh chart data.', 'national-grid' ),
                 'loadingMessage' => __( 'Loading latest data...', 'national-grid' ),
                 'updatedAtLabel' => __( 'Updated (UTC): ', 'national-grid' ),
@@ -193,6 +196,7 @@ class National_Grid_Frontend {
                 'chartAnimation' => 1 === (int) get_option( NATIONAL_GRID_OPTION_CHART_ANIMATION, 1 ) ? 1 : 0,
                 'chartTextColor' => '#5c5c5c',
                 'tooltipTextColor' => '#ffffff',
+                'sync' => self::get_frontend_sync_meta(),
             ]
         );
     }
@@ -217,14 +221,59 @@ class National_Grid_Frontend {
             );
         }
 
+        $sync_meta = self::get_frontend_sync_meta();
+        $sync_only = isset( $_POST['syncOnly'] ) && '1' === (string) wp_unslash( $_POST['syncOnly'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+        if ( $sync_only ) {
+            wp_send_json_success(
+                [
+                    'sync' => $sync_meta,
+                    'updatedAt' => gmdate( 'Y-m-d H:i:s' ),
+                ]
+            );
+        }
+
         $chart_data = self::get_chart_data();
 
         wp_send_json_success(
             [
                 'data' => $chart_data,
+                'sync' => $sync_meta,
                 'updatedAt' => gmdate( 'Y-m-d H:i:s' ),
             ]
         );
+    }
+
+    /**
+     * Returns synchronization metadata used by frontend refresh scheduler.
+     *
+     * @return array<string, mixed>
+     */
+    private static function get_frontend_sync_meta(): array {
+        $last_finished_at = DatabaseStorage::normalizeUtcTimestamp(
+            (string) get_option( NATIONAL_GRID_OPTION_LAST_UPDATE_FINISHED_AT, '' )
+        );
+        $next_scheduled_at = self::get_next_cron_update_utc();
+
+        return [
+            'lastUpdateFinishedAt' => $last_finished_at,
+            'nextCronUpdateAt' => $next_scheduled_at,
+            'autoUpdateEnabled' => 1 === (int) get_option( NATIONAL_GRID_OPTION_AUTO_UPDATE, 0 ),
+        ];
+    }
+
+    /**
+     * Returns next scheduled cron update timestamp in UTC or empty string.
+     *
+     * @return string
+     */
+    private static function get_next_cron_update_utc(): string {
+        $timestamp = wp_next_scheduled( self::CRON_HOOK );
+        if ( false === $timestamp ) {
+            return '';
+        }
+
+        return gmdate( 'Y-m-d H:i:s', (int) $timestamp );
     }
 
     /**

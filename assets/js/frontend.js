@@ -1133,8 +1133,85 @@
     applyChartUpdateWithAnimation(chart);
   }
 
+  // Extracts and normalizes sync metadata from AJAX response payload.
+  function extractSyncMeta(responseData) {
+    var sync = responseData && responseData.sync && typeof responseData.sync === "object" ? responseData.sync : {};
+    var initialSync = config && config.sync && typeof config.sync === "object" ? config.sync : {};
+
+    var lastUpdateFinishedAt =
+      typeof sync.lastUpdateFinishedAt === "string" && sync.lastUpdateFinishedAt
+        ? sync.lastUpdateFinishedAt
+        : typeof initialSync.lastUpdateFinishedAt === "string" && initialSync.lastUpdateFinishedAt
+          ? initialSync.lastUpdateFinishedAt
+          : "";
+    var nextCronUpdateAt =
+      typeof sync.nextCronUpdateAt === "string" && sync.nextCronUpdateAt
+        ? sync.nextCronUpdateAt
+        : typeof initialSync.nextCronUpdateAt === "string" && initialSync.nextCronUpdateAt
+          ? initialSync.nextCronUpdateAt
+          : "";
+
+    return {
+      lastUpdateFinishedAt: lastUpdateFinishedAt,
+      nextCronUpdateAt: nextCronUpdateAt,
+    };
+  }
+
+  // Schedules one targeted refresh around the next cron run.
+  function scheduleNextCronRefresh(widget, chartState, syncMeta) {
+    if (chartState.preciseRefreshTimerId) {
+      window.clearTimeout(chartState.preciseRefreshTimerId);
+      chartState.preciseRefreshTimerId = null;
+    }
+
+    if (!syncMeta || !syncMeta.nextCronUpdateAt) {
+      return;
+    }
+
+    var nextCronDate = parseUtcDateTime(syncMeta.nextCronUpdateAt);
+    if (!nextCronDate) {
+      return;
+    }
+
+    var delayMs = Math.max(1000, nextCronDate.getTime() - Date.now() + 1000);
+    chartState.preciseRefreshTimerId = window.setTimeout(function () {
+      fetchData(widget, chartState);
+    }, delayMs);
+  }
+
+  // Lightweight sync check used by fallback timer to avoid missing delayed cron runs.
+  function fetchSyncMeta() {
+    var formData = new window.FormData();
+
+    formData.append("action", config.action);
+    formData.append("nonce", config.nonce);
+    formData.append("syncOnly", "1");
+
+    return window
+      .fetch(config.ajaxUrl, {
+        method: "POST",
+        body: formData,
+        cache: "no-store",
+        credentials: "same-origin",
+      })
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (response) {
+        if (!response || !response.success || !response.data) {
+          throw new Error(config.errorMessage);
+        }
+        return extractSyncMeta(response.data);
+      });
+  }
+
   // Fetches latest chart data via AJAX and updates widget UI.
   function fetchData(widget, chartState) {
+    if (chartState.isFetching) {
+      return Promise.resolve();
+    }
+
+    chartState.isFetching = true;
     var formData = new window.FormData();
 
     formData.append("action", config.action);
@@ -1156,6 +1233,7 @@
         }
 
         var nextData = response.data.data || {};
+        var syncMeta = extractSyncMeta(response.data);
         var hasRenderableData = !!buildPieData(nextData) || !!buildBarData(nextData);
         if (!chartState.pieChart) {
           chartState.pieChart = createPieChart(widget, nextData);
@@ -1184,15 +1262,20 @@
         renderLiveHeading(widget, chartState.lastPointTime);
         renderCleanPowerHeading(widget, nextData);
         renderSharedLegend(widget, nextData);
+        chartState.lastUpdateFinishedAt = syncMeta.lastUpdateFinishedAt;
+        chartState.nextCronUpdateAt = syncMeta.nextCronUpdateAt;
+        scheduleNextCronRefresh(widget, chartState, syncMeta);
 
         if (hasRenderableData) {
           renderStatus(widget, "", false);
         } else {
           renderStatus(widget, config.noDataMessage, false);
         }
+        chartState.isFetching = false;
       })
       .catch(function () {
         renderStatus(widget, config.errorMessage, true);
+        chartState.isFetching = false;
       });
   }
 
@@ -1202,6 +1285,11 @@
       pieChart: null,
       barChart: null,
       lastPointTime: "",
+      lastUpdateFinishedAt: "",
+      nextCronUpdateAt: "",
+      preciseRefreshTimerId: null,
+      fallbackIntervalId: null,
+      isFetching: false,
     };
 
     renderSharedLegend(widget, {});
@@ -1209,11 +1297,27 @@
     renderCleanPowerHeading(widget, {});
     renderStatus(widget, config.loadingMessage || config.noDataMessage, false);
 
-    var intervalMinutes = parseInt(config.timeoutMinutes, 10) || 5;
+    var fallbackIntervalMinutes =
+      parseInt(config.fallbackTimeoutMinutes, 10) || parseInt(config.timeoutMinutes, 10) || 5;
     fetchData(widget, chartState);
-    // Keeps widget data fresh using backend-configured refresh interval.
-    window.setInterval(function () {
-      fetchData(widget, chartState);
-    }, intervalMinutes * 60 * 1000);
+
+    // Fallback sync check interval from "National Grid Data Update Timed Out" option.
+    chartState.fallbackIntervalId = window.setInterval(function () {
+      fetchSyncMeta()
+        .then(function (syncMeta) {
+          chartState.nextCronUpdateAt = syncMeta.nextCronUpdateAt;
+          scheduleNextCronRefresh(widget, chartState, syncMeta);
+
+          if (
+            syncMeta.lastUpdateFinishedAt &&
+            syncMeta.lastUpdateFinishedAt !== chartState.lastUpdateFinishedAt
+          ) {
+            fetchData(widget, chartState);
+          }
+        })
+        .catch(function () {
+          fetchData(widget, chartState);
+        });
+    }, fallbackIntervalMinutes * 60 * 1000);
   });
 })();
