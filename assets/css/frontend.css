@@ -2,6 +2,10 @@ body.national-grid-page-template main {
   padding: 0;
 }
 
+.national-grid-frontend + .section-simple-text {
+  padding-top: 30px;
+}
+
 body.national-grid-page-template:not(.has-transparent-header) header{
   position: relative;
   background-color: #272092;
