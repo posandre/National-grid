@@ -12,7 +12,7 @@ body.national-grid-page-template:not(.has-transparent-header) header{
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  margin: 0 0 60px 0;
+  margin: 0 0 5px 0;
   overflow-x: hidden;
   border: 1px none #817cba;
   border-top-style: solid;

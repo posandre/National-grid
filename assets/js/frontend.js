@@ -955,6 +955,7 @@
               color: CHART_TEXT_COLOR,
               font: {
                 size: isMobileViewport ? 10 : 12,
+                weight: "700",
               },
               minRotation: 0,
               maxRotation: 0,
